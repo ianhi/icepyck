@@ -7,13 +7,15 @@
 # ///
 """Compare icepyck reads against the reference icechunk implementation."""
 
+from pathlib import Path
+
 import numpy as np
 import zarr
 
 import icechunk
 import icepyck
 
-REPO_PATH = "test-repos/basic"
+REPO_PATH = str(Path(__file__).resolve().parent.parent / "test-repos" / "basic")
 
 # --- Read with icepyck ---
 repo = icepyck.open(REPO_PATH)

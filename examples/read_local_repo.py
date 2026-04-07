@@ -6,11 +6,16 @@
 # ///
 """Read data from a local icechunk repository using icepyck + zarr."""
 
+from pathlib import Path
+
 import icepyck
 import zarr
 
+# Resolve path relative to this script's parent (the project root)
+REPO_PATH = Path(__file__).resolve().parent.parent / "test-repos" / "basic"
+
 # Open repository and get a read-only session
-repo = icepyck.open("test-repos/basic")
+repo = icepyck.open(REPO_PATH)
 print("Branches:", repo.list_branches())
 print("Tags:", repo.list_tags())
 
