@@ -326,9 +326,8 @@ class IcechunkReadStore(Store):
         prototype: BufferPrototype,
         byte_range: ByteRequest | None = None,
     ) -> Buffer | None:
-        # s3fs async doesn't work here due to event loop conflicts
-        # (s3fs binds connections to its internal loop, zarr uses a different one).
-        # Sync reads are fine — the real win is asyncio.gather in get_partial_values.
+        if self._storage is not None and hasattr(self._storage, "aread"):
+            return await self._aget(key, prototype, byte_range)
         data = self._resolve_key(key)
         if data is None:
             return None

@@ -56,28 +56,31 @@ class S3Storage:
     def __init__(self, url: str, anon: bool = False, **s3_kwargs: object) -> None:
         import s3fs  # type: ignore[import-not-found]
 
-        self._fs = s3fs.S3FileSystem(anon=anon, **s3_kwargs)
-        # Normalize: remove s3:// prefix, ensure no trailing slash
+        # Sync fs for open/session (runs outside any event loop)
+        self._sync_fs = s3fs.S3FileSystem(anon=anon, **s3_kwargs)
+        # Async fs for zarr store reads (runs inside zarr's event loop)
+        self._async_fs = s3fs.S3FileSystem(
+            anon=anon, asynchronous=True, **s3_kwargs
+        )
         self._root = url.removeprefix("s3://").rstrip("/")
 
     def read(self, path: str) -> bytes:
         full = f"{self._root}/{path}"
-        return self._fs.cat_file(full)  # type: ignore[no-any-return]
+        return self._sync_fs.cat_file(full)  # type: ignore[no-any-return]
 
     async def aread(self, path: str) -> bytes:
-        """Async version of read — uses s3fs's native async I/O."""
+        """Async read using the async-mode s3fs instance."""
         full = f"{self._root}/{path}"
-        return await self._fs._cat_file(full)  # type: ignore[no-any-return]
+        return await self._async_fs._cat_file(full)  # type: ignore[no-any-return]
 
     def exists(self, path: str) -> bool:
-        return self._fs.exists(f"{self._root}/{path}")  # type: ignore[no-any-return]
+        return self._sync_fs.exists(f"{self._root}/{path}")  # type: ignore[no-any-return]
 
     def list_prefix(self, prefix: str) -> list[str]:
         full = f"{self._root}/{prefix}"
         try:
-            files: list[str] = self._fs.ls(full, detail=False)
+            files: list[str] = self._sync_fs.ls(full, detail=False)
         except FileNotFoundError:
             return []
-        # Return relative paths
         root_prefix = f"{self._root}/"
         return [f.removeprefix(root_prefix) for f in files]
