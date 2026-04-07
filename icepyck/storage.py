@@ -56,6 +56,16 @@ class S3Storage:
     def __init__(self, url: str, anon: bool = False, **s3_kwargs: object) -> None:
         import s3fs  # type: ignore[import-not-found]
 
+        # Newer aiobotocore versions send checksum headers that some S3 buckets
+        # reject with 400 for anonymous access. Disable them by default.
+        s3_kwargs.setdefault(
+            "config_kwargs",
+            {
+                "request_checksum_calculation": "when_required",
+                "response_checksum_validation": "when_required",
+            },
+        )
+
         # Sync fs for open/session (runs outside any event loop)
         self._sync_fs = s3fs.S3FileSystem(anon=anon, **s3_kwargs)
         # Async fs for zarr store reads (runs inside zarr's event loop)
