@@ -118,7 +118,7 @@ def ic_read_chunk():
 
 # ── Run benchmarks ────────────────────────────────────────
 
-table = Table(title="⛏️🧊 icepyck vs icechunk benchmark (xarray-air-temp)")
+table = Table(title="🧊⛏️ icepyck vs icechunk benchmark (xarray-air-temp)")
 table.add_column("Operation", style="bold")
 table.add_column("icepyck", justify="right")
 table.add_column("icechunk", justify="right")

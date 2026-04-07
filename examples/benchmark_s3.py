@@ -118,7 +118,7 @@ pyck = bench_icepyck()
 console.print("[dim]Benchmarking icechunk...[/dim]")
 ic = bench_icechunk()
 
-table = Table(title="⛏️🧊 S3 ERA5 benchmark (7TB dataset)")
+table = Table(title="🧊⛏️ S3 ERA5 benchmark (7TB dataset)")
 table.add_column("Operation", style="bold")
 table.add_column("icepyck", justify="right")
 table.add_column("icechunk", justify="right")

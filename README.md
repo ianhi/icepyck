@@ -1,4 +1,4 @@
-# ⛏️🧊 icepyck
+# 🧊⛏️ icepyck
 
 **Can you build an Icechunk reader from just the spec?**
 
@@ -73,7 +73,7 @@ icepyck show test-repos/basic main          # snapshot detail
 ```
 
 ```
-⛏️🧊 test-repos/xarray-air-temp @ main
+🧊⛏️ test-repos/xarray-air-temp @ main
 ├── 📊 air int16 [2920, 25, 53] chunks=[730, 13, 27]
 ├── 📊 lat float32 [25] chunks=[25]
 ├── 📊 lon float32 [53] chunks=[53]
