@@ -9,14 +9,33 @@ from icepyck.chunks import read_chunk
 from icepyck.manifest import ChunkRefInfo, ManifestReader
 from icepyck.repo import RepoInfo
 from icepyck.snapshot import NodeInfo, SnapshotReader
+from icepyck.storage import LocalStorage, S3Storage, Storage
 from icepyck.store import IcechunkReadStore
 
-__all__ = ["Repository", "Session", "open"]
+__all__ = ["LocalStorage", "Repository", "S3Storage", "Session", "Storage", "open"]
 
 
-def open(path: str | Path) -> Repository:
-    """Open an Icechunk repository at the given path."""
-    return Repository(path)
+def open(
+    path: str | Path, *, anon: bool = False, **storage_kwargs: object
+) -> Repository:
+    """Open an Icechunk repository at the given path or S3 URL.
+
+    Parameters
+    ----------
+    path : str or Path
+        Local filesystem path or an ``s3://`` URL.
+    anon : bool
+        Use anonymous (unsigned) S3 access.  Only relevant for S3 URLs.
+    **storage_kwargs
+        Extra keyword arguments forwarded to :class:`S3Storage` (e.g.
+        ``endpoint_url``, ``key``, ``secret``).
+    """
+    path_str = str(path)
+    if path_str.startswith("s3://"):
+        storage: Storage = S3Storage(path_str, anon=anon, **storage_kwargs)
+    else:
+        storage = LocalStorage(path_str)
+    return Repository(storage=storage)
 
 
 class Session:
@@ -46,6 +65,7 @@ class Session:
             self._store = IcechunkReadStore(
                 root_path=self._repo._root,
                 snapshot=self._snapshot,
+                storage=self._repo._storage,
             )
         return self._store
 
@@ -84,14 +104,30 @@ class Repository:
 
     Parameters
     ----------
-    path : str or Path
+    path : str or Path, optional
         Root path of the repository (the directory containing ``repo``,
-        ``snapshots/``, ``manifests/``, ``chunks/``).
+        ``snapshots/``, ``manifests/``, ``chunks/``).  Ignored when
+        *storage* is provided.
+    storage : Storage, optional
+        Storage backend.  When provided, all I/O goes through it.
     """
 
-    def __init__(self, path: str | Path) -> None:
-        self._root = Path(path)
-        self._repo = RepoInfo(self._root / "repo")
+    def __init__(
+        self,
+        path: str | Path | None = None,
+        *,
+        storage: Storage | None = None,
+    ) -> None:
+        if storage is not None:
+            self._storage: Storage | None = storage
+            self._root: Path | None = None
+            self._repo = RepoInfo(storage=storage)
+        elif path is not None:
+            self._root = Path(path)
+            self._storage = None
+            self._repo = RepoInfo(self._root / "repo")
+        else:
+            raise TypeError("Either path or storage must be provided")
         self._snapshot_cache: dict[bytes, SnapshotReader] = {}
         self._manifest_cache: dict[bytes, ManifestReader] = {}
 
@@ -182,7 +218,7 @@ class Repository:
             If the array, manifest, or chunk index is not found.
         """
         chunk_ref = self._find_chunk_ref(ref, array_path, chunk_index)
-        return read_chunk(self._root, chunk_ref)
+        return read_chunk(self._root, chunk_ref, storage=self._storage)
 
     def read_all_chunks(
         self, ref: str, array_path: str
@@ -212,7 +248,7 @@ class Repository:
         for mref in manifest_refs:
             manifest = self._get_manifest(mref.manifest_id)
             for cref in manifest.get_chunk_refs(node_id):
-                result[cref.index] = read_chunk(self._root, cref)
+                result[cref.index] = read_chunk(self._root, cref, storage=self._storage)
         return result
 
     def get_array_metadata(self, ref: str, array_path: str) -> dict:  # type: ignore[type-arg]
@@ -280,7 +316,7 @@ class Repository:
         """Return a (cached) SnapshotReader for the given snapshot ID."""
         if snapshot_id not in self._snapshot_cache:
             self._snapshot_cache[snapshot_id] = SnapshotReader(
-                self._root, snapshot_id
+                self._root, snapshot_id, storage=self._storage
             )
         return self._snapshot_cache[snapshot_id]
 
@@ -288,7 +324,7 @@ class Repository:
         """Return a (cached) ManifestReader for the given manifest ID."""
         if manifest_id not in self._manifest_cache:
             self._manifest_cache[manifest_id] = ManifestReader(
-                self._root, manifest_id
+                self._root, manifest_id, storage=self._storage
             )
         return self._manifest_cache[manifest_id]
 

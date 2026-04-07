@@ -56,13 +56,13 @@ class Header:
     compression: Compression
 
 
-def parse_file(path: str | Path) -> tuple[Header, bytes]:
-    """Parse an Icechunk file, returning (header, decompressed payload).
+def parse_bytes(raw: bytes) -> tuple[Header, bytes]:
+    """Parse raw Icechunk file bytes, returning (header, decompressed payload).
 
     Parameters
     ----------
-    path : str or Path
-        Path to the Icechunk metadata file.
+    raw : bytes
+        The complete file contents.
 
     Returns
     -------
@@ -74,11 +74,8 @@ def parse_file(path: str | Path) -> tuple[Header, bytes]:
     Raises
     ------
     ValueError
-        If the magic bytes don't match or the file is too short.
+        If the magic bytes don't match or the data is too short.
     """
-    path = Path(path)
-    raw = path.read_bytes()
-
     if len(raw) < HEADER_SIZE:
         raise ValueError(
             f"File too short: {len(raw)} bytes, need at least {HEADER_SIZE}"
@@ -107,3 +104,27 @@ def parse_file(path: str | Path) -> tuple[Header, bytes]:
     )
 
     return header, payload
+
+
+def parse_file(path: str | Path) -> tuple[Header, bytes]:
+    """Parse an Icechunk file, returning (header, decompressed payload).
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the Icechunk metadata file.
+
+    Returns
+    -------
+    header : Header
+        The parsed 39-byte header.
+    payload : bytes
+        The decompressed flatbuffers payload (everything after the header).
+
+    Raises
+    ------
+    ValueError
+        If the magic bytes don't match or the file is too short.
+    """
+    raw = Path(path).read_bytes()
+    return parse_bytes(raw)

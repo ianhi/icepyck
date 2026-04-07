@@ -9,9 +9,13 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "flatbuffers",
+    "rich>=14.3.3",
     "zarr>=3",
     "zstandard",
 ]
+
+[project.optional-dependencies]
+s3 = ["s3fs"]
 
 [dependency-groups]
 dev = [

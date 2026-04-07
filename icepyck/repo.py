@@ -9,10 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from icepyck.crockford import encode as crockford_encode
-from icepyck.header import FileType, parse_file
+from icepyck.header import FileType, parse_bytes, parse_file
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from icepyck.storage import Storage
 
 
 class RepoInfo:
@@ -22,12 +24,27 @@ class RepoInfo:
     ----------
     path : str or Path
         Path to the ``repo`` file (e.g. ``$ROOT/repo``).
+        Ignored if *storage* is provided.
+    storage : Storage, optional
+        Storage backend. When provided, reads ``"repo"`` from it
+        and *path* is ignored.
     """
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(
+        self,
+        path: str | Path | None = None,
+        *,
+        storage: Storage | None = None,
+    ) -> None:
         from icepyck.generated.Repo import Repo
 
-        header, payload = parse_file(path)
+        if storage is not None:
+            raw = storage.read("repo")
+            header, payload = parse_bytes(raw)
+        elif path is not None:
+            header, payload = parse_file(path)
+        else:
+            raise TypeError("Either path or storage must be provided")
         if header.file_type != FileType.REPO_INFO:
             raise ValueError(
                 f"Expected REPO_INFO file type ({FileType.REPO_INFO}), "

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     from icepyck.manifest import ManifestReader
     from icepyck.snapshot import NodeInfo, SnapshotReader
+    from icepyck.storage import Storage
 
 
 def _parse_key(key: str) -> tuple[str, str | tuple[int, ...]]:
@@ -82,11 +83,15 @@ class IcechunkReadStore(Store):
 
     def __init__(
         self,
-        root_path: Path,
-        snapshot: SnapshotReader,
+        root_path: Path | None = None,
+        snapshot: SnapshotReader | None = None,
+        *,
+        storage: Storage | None = None,
     ) -> None:
         super().__init__(read_only=True)
         self._root_path = root_path
+        self._storage = storage
+        assert snapshot is not None
         self._snapshot = snapshot
 
         # Pre-build lookup structures
@@ -132,7 +137,9 @@ class IcechunkReadStore(Store):
         from icepyck.manifest import ManifestReader as MR
 
         if manifest_id not in self._manifest_cache:
-            self._manifest_cache[manifest_id] = MR(self._root_path, manifest_id)
+            self._manifest_cache[manifest_id] = MR(
+                self._root_path, manifest_id, storage=self._storage
+            )
         return self._manifest_cache[manifest_id]
 
     def _resolve_key(self, key: str) -> bytes | None:
@@ -162,7 +169,7 @@ class IcechunkReadStore(Store):
             manifest = self._get_manifest(mref.manifest_id)
             for cref in manifest.get_chunk_refs(node.node_id):
                 if cref.index == chunk_coords:
-                    return read_chunk(self._root_path, cref)
+                    return read_chunk(self._root_path, cref, storage=self._storage)
         return None
 
     # ------------------------------------------------------------------

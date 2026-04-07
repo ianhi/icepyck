@@ -6,21 +6,34 @@ or raises NotImplementedError for virtual chunks.
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from icepyck.crockford import encode as crockford_encode
 from icepyck.manifest import ChunkRefInfo, ChunkType
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def read_chunk(root_path: str | Path, chunk_ref: ChunkRefInfo) -> bytes:
+    from icepyck.storage import Storage
+
+
+def read_chunk(
+    root_path: str | Path | None,
+    chunk_ref: ChunkRefInfo,
+    *,
+    storage: Storage | None = None,
+) -> bytes:
     """Read chunk data based on the ChunkRefInfo.
 
     Parameters
     ----------
-    root_path : str or Path
-        Root path of the Icechunk repository.
+    root_path : str or Path or None
+        Root path of the Icechunk repository.  Ignored when *storage*
+        is provided.
     chunk_ref : ChunkRefInfo
         The chunk reference describing where the data is.
+    storage : Storage, optional
+        Storage backend to read from.
 
     Returns
     -------
@@ -42,10 +55,16 @@ def read_chunk(root_path: str | Path, chunk_ref: ChunkRefInfo) -> bytes:
     elif chunk_ref.chunk_type == ChunkType.NATIVE:
         if chunk_ref.chunk_id is None:
             raise ValueError("Native chunk ref has no chunk_id")
-        root = Path(root_path)
         chunk_name = crockford_encode(chunk_ref.chunk_id)
-        chunk_path = root / "chunks" / chunk_name
-        raw = chunk_path.read_bytes()
+        if storage is not None:
+            raw = storage.read(f"chunks/{chunk_name}")
+        elif root_path is not None:
+            from pathlib import Path as _Path
+
+            chunk_path = _Path(root_path) / "chunks" / chunk_name
+            raw = chunk_path.read_bytes()
+        else:
+            raise TypeError("Either root_path or storage must be provided")
         if chunk_ref.length > 0:
             return raw[chunk_ref.offset : chunk_ref.offset + chunk_ref.length]
         else:

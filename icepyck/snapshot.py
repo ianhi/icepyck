@@ -7,10 +7,15 @@ with their paths, types, zarr metadata, and manifest references.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from icepyck.crockford import encode as crockford_encode
-from icepyck.header import FileType, parse_file
+from icepyck.header import FileType, parse_bytes, parse_file
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from icepyck.storage import Storage
 
 
 @dataclass(frozen=True)
@@ -44,18 +49,31 @@ class SnapshotReader:
         The 12-byte ObjectId12 identifying the snapshot.
     """
 
-    def __init__(self, root_path: str | Path, snapshot_id: bytes) -> None:
+    def __init__(
+        self,
+        root_path: str | Path | None = None,
+        snapshot_id: bytes = b"",
+        *,
+        storage: Storage | None = None,
+    ) -> None:
         from icepyck.generated.ArrayNodeData import ArrayNodeData
         from icepyck.generated.NodeData import NodeData
         from icepyck.generated.Snapshot import Snapshot
 
-        self._root_path = Path(root_path)
         self._snapshot_id = snapshot_id
-
         snapshot_name = crockford_encode(snapshot_id)
-        snapshot_path = self._root_path / "snapshots" / snapshot_name
 
-        header, payload = parse_file(snapshot_path)
+        if storage is not None:
+            raw = storage.read(f"snapshots/{snapshot_name}")
+            header, payload = parse_bytes(raw)
+        elif root_path is not None:
+            from pathlib import Path as _Path
+
+            self._root_path: Path | None = _Path(root_path)
+            snapshot_path = self._root_path / "snapshots" / snapshot_name
+            header, payload = parse_file(snapshot_path)
+        else:
+            raise TypeError("Either root_path or storage must be provided")
         if header.file_type != FileType.SNAPSHOT:
             raise ValueError(
                 f"Expected SNAPSHOT file type ({FileType.SNAPSHOT}), "

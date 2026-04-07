@@ -8,10 +8,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from icepyck.crockford import encode as crockford_encode
-from icepyck.header import FileType, parse_file
+from icepyck.header import FileType, parse_bytes, parse_file
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from icepyck.storage import Storage
 
 
 class ChunkType(Enum):
@@ -49,16 +54,29 @@ class ManifestReader:
         The 12-byte ObjectId12 identifying the manifest.
     """
 
-    def __init__(self, root_path: str | Path, manifest_id: bytes) -> None:
+    def __init__(
+        self,
+        root_path: str | Path | None = None,
+        manifest_id: bytes = b"",
+        *,
+        storage: Storage | None = None,
+    ) -> None:
         from icepyck.generated.Manifest import Manifest
 
-        self._root_path = Path(root_path)
         self._manifest_id = manifest_id
-
         manifest_name = crockford_encode(manifest_id)
-        manifest_path = self._root_path / "manifests" / manifest_name
 
-        header, payload = parse_file(manifest_path)
+        if storage is not None:
+            raw = storage.read(f"manifests/{manifest_name}")
+            header, payload = parse_bytes(raw)
+        elif root_path is not None:
+            from pathlib import Path as _Path
+
+            self._root_path: Path | None = _Path(root_path)
+            manifest_path = self._root_path / "manifests" / manifest_name
+            header, payload = parse_file(manifest_path)
+        else:
+            raise TypeError("Either root_path or storage must be provided")
         if header.file_type != FileType.MANIFEST:
             raise ValueError(
                 f"Expected MANIFEST file type ({FileType.MANIFEST}), "
