@@ -9,13 +9,74 @@ from icepyck.chunks import read_chunk
 from icepyck.manifest import ChunkRefInfo, ManifestReader
 from icepyck.repo import RepoInfo
 from icepyck.snapshot import NodeInfo, SnapshotReader
+from icepyck.store import IcechunkReadStore
 
-__all__ = ["Repository", "open"]
+__all__ = ["Repository", "Session", "open"]
 
 
 def open(path: str | Path) -> Repository:
     """Open an Icechunk repository at the given path."""
     return Repository(path)
+
+
+class Session:
+    """A read-only session bound to a specific snapshot.
+
+    Provides a zarr-compatible :pyclass:`~icepyck.store.IcechunkReadStore`
+    and convenience methods for inspecting the snapshot contents.
+
+    Parameters
+    ----------
+    repo : Repository
+        The parent repository.
+    snapshot_id : bytes
+        The 12-byte ObjectId12 identifying the snapshot.
+    """
+
+    def __init__(self, repo: Repository, snapshot_id: bytes) -> None:
+        self._repo = repo
+        self._snapshot_id = snapshot_id
+        self._snapshot = repo._get_snapshot_by_id(snapshot_id)
+        self._store: IcechunkReadStore | None = None
+
+    @property
+    def store(self) -> IcechunkReadStore:
+        """Return a zarr v3 read-only Store for this session."""
+        if self._store is None:
+            self._store = IcechunkReadStore(
+                root_path=self._repo._root,
+                snapshot=self._snapshot,
+            )
+        return self._store
+
+    def list_nodes(self) -> list[NodeInfo]:
+        """List all nodes in this session's snapshot."""
+        return self._snapshot.list_nodes()
+
+    def get_array_metadata(self, path: str) -> dict:  # type: ignore[type-arg]
+        """Parse and return the zarr.json metadata for an array.
+
+        Parameters
+        ----------
+        path : str
+            Path of the array node (e.g. ``"/group1/temperatures"``).
+
+        Returns
+        -------
+        dict
+            The parsed zarr.json metadata.
+        """
+        node = self._get_array_node(path)
+        if node.user_data is None:
+            raise ValueError(f"Array {path!r} has no zarr.json metadata")
+        return json.loads(node.user_data)  # type: ignore[no-any-return]
+
+    def _get_array_node(self, array_path: str) -> NodeInfo:
+        """Find an array node by path in this session's snapshot."""
+        for node in self._snapshot.list_nodes():
+            if node.path == array_path and node.node_type == "array":
+                return node
+        raise KeyError(f"Array node not found: {array_path!r}")
 
 
 class Repository:
@@ -34,6 +95,50 @@ class Repository:
         self._snapshot_cache: dict[bytes, SnapshotReader] = {}
         self._manifest_cache: dict[bytes, ManifestReader] = {}
 
+    # ------------------------------------------------------------------
+    # Session-based API (primary)
+    # ------------------------------------------------------------------
+
+    def readonly_session(
+        self,
+        *,
+        branch: str | None = None,
+        tag: str | None = None,
+        snapshot: str | None = None,
+    ) -> Session:
+        """Get a read-only session for a specific branch, tag, or snapshot.
+
+        Exactly one of *branch*, *tag*, or *snapshot* must be provided.
+
+        Parameters
+        ----------
+        branch : str, optional
+            A branch name (e.g. ``"main"``).
+        tag : str, optional
+            A tag name (e.g. ``"v1"``).
+        snapshot : str, optional
+            A hex-encoded snapshot ID.
+
+        Returns
+        -------
+        Session
+            A read-only session bound to the resolved snapshot.
+        """
+        specified = sum(x is not None for x in (branch, tag, snapshot))
+        if specified != 1:
+            raise ValueError(
+                "Exactly one of branch, tag, or snapshot must be specified"
+            )
+        if branch is not None:
+            ref = branch
+        elif tag is not None:
+            ref = tag
+        else:
+            assert snapshot is not None
+            ref = snapshot
+        snapshot_id = self._resolve_ref(ref)
+        return Session(self, snapshot_id)
+
     def list_branches(self) -> list[str]:
         """Return the names of all branches."""
         return self._repo.list_branches()
@@ -41,6 +146,10 @@ class Repository:
     def list_tags(self) -> list[str]:
         """Return the names of all tags."""
         return self._repo.list_tags()
+
+    # ------------------------------------------------------------------
+    # Legacy API (backward-compatible)
+    # ------------------------------------------------------------------
 
     def list_nodes(self, ref: str = "main") -> list[NodeInfo]:
         """List all nodes in the snapshot referenced by *ref*.
@@ -165,6 +274,10 @@ class Repository:
     def _get_snapshot(self, ref: str) -> SnapshotReader:
         """Return a (cached) SnapshotReader for the given ref."""
         snapshot_id = self._resolve_ref(ref)
+        return self._get_snapshot_by_id(snapshot_id)
+
+    def _get_snapshot_by_id(self, snapshot_id: bytes) -> SnapshotReader:
+        """Return a (cached) SnapshotReader for the given snapshot ID."""
         if snapshot_id not in self._snapshot_cache:
             self._snapshot_cache[snapshot_id] = SnapshotReader(
                 self._root, snapshot_id
