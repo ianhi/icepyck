@@ -29,7 +29,7 @@ class ArrayManifest(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from generated.ObjectId8 import ObjectId8
+            from icepyck.generated.ObjectId8 import ObjectId8
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -42,7 +42,7 @@ class ArrayManifest(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.ChunkRef import ChunkRef
+            from icepyck.generated.ChunkRef import ChunkRef
             obj = ChunkRef()
             obj.Init(self._tab.Bytes, x)
             return obj

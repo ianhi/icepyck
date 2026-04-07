@@ -38,7 +38,7 @@ class Repo(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.Ref import Ref
+            from icepyck.generated.Ref import Ref
             obj = Ref()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -63,7 +63,7 @@ class Repo(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.Ref import Ref
+            from icepyck.generated.Ref import Ref
             obj = Ref()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -108,7 +108,7 @@ class Repo(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.SnapshotInfo import SnapshotInfo
+            from icepyck.generated.SnapshotInfo import SnapshotInfo
             obj = SnapshotInfo()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -131,7 +131,7 @@ class Repo(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from generated.RepoStatus import RepoStatus
+            from icepyck.generated.RepoStatus import RepoStatus
             obj = RepoStatus()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -144,7 +144,7 @@ class Repo(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.MetadataItem import MetadataItem
+            from icepyck.generated.MetadataItem import MetadataItem
             obj = MetadataItem()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -169,7 +169,7 @@ class Repo(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.Update import Update
+            from icepyck.generated.Update import Update
             obj = Update()
             obj.Init(self._tab.Bytes, x)
             return obj

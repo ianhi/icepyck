@@ -29,7 +29,7 @@ class TransactionLog(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from generated.ObjectId12 import ObjectId12
+            from icepyck.generated.ObjectId12 import ObjectId12
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -41,7 +41,7 @@ class TransactionLog(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
-            from generated.ObjectId8 import ObjectId8
+            from icepyck.generated.ObjectId8 import ObjectId8
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -65,7 +65,7 @@ class TransactionLog(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
-            from generated.ObjectId8 import ObjectId8
+            from icepyck.generated.ObjectId8 import ObjectId8
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -89,7 +89,7 @@ class TransactionLog(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
-            from generated.ObjectId8 import ObjectId8
+            from icepyck.generated.ObjectId8 import ObjectId8
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -113,7 +113,7 @@ class TransactionLog(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
-            from generated.ObjectId8 import ObjectId8
+            from icepyck.generated.ObjectId8 import ObjectId8
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -137,7 +137,7 @@ class TransactionLog(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
-            from generated.ObjectId8 import ObjectId8
+            from icepyck.generated.ObjectId8 import ObjectId8
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -161,7 +161,7 @@ class TransactionLog(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
-            from generated.ObjectId8 import ObjectId8
+            from icepyck.generated.ObjectId8 import ObjectId8
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -186,7 +186,7 @@ class TransactionLog(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.ArrayUpdatedChunks import ArrayUpdatedChunks
+            from icepyck.generated.ArrayUpdatedChunks import ArrayUpdatedChunks
             obj = ArrayUpdatedChunks()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -211,7 +211,7 @@ class TransactionLog(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.MoveOperation import MoveOperation
+            from icepyck.generated.MoveOperation import MoveOperation
             obj = MoveOperation()
             obj.Init(self._tab.Bytes, x)
             return obj

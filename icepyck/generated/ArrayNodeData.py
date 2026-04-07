@@ -30,7 +30,7 @@ class ArrayNodeData(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 16
-            from generated.DimensionShape import DimensionShape
+            from icepyck.generated.DimensionShape import DimensionShape
             obj = DimensionShape()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -55,7 +55,7 @@ class ArrayNodeData(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.DimensionName import DimensionName
+            from icepyck.generated.DimensionName import DimensionName
             obj = DimensionName()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -80,7 +80,7 @@ class ArrayNodeData(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.ManifestRef import ManifestRef
+            from icepyck.generated.ManifestRef import ManifestRef
             obj = ManifestRef()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -105,7 +105,7 @@ class ArrayNodeData(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.DimensionShapeV2 import DimensionShapeV2
+            from icepyck.generated.DimensionShapeV2 import DimensionShapeV2
             obj = DimensionShapeV2()
             obj.Init(self._tab.Bytes, x)
             return obj

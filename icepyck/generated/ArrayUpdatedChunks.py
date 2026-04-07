@@ -29,7 +29,7 @@ class ArrayUpdatedChunks(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from generated.ObjectId8 import ObjectId8
+            from icepyck.generated.ObjectId8 import ObjectId8
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -42,7 +42,7 @@ class ArrayUpdatedChunks(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.ChunkIndices import ChunkIndices
+            from icepyck.generated.ChunkIndices import ChunkIndices
             obj = ChunkIndices()
             obj.Init(self._tab.Bytes, x)
             return obj

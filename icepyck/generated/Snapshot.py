@@ -29,7 +29,7 @@ class Snapshot(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = o + self._tab.Pos
-            from generated.ObjectId12 import ObjectId12
+            from icepyck.generated.ObjectId12 import ObjectId12
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -40,7 +40,7 @@ class Snapshot(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = o + self._tab.Pos
-            from generated.ObjectId12 import ObjectId12
+            from icepyck.generated.ObjectId12 import ObjectId12
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -53,7 +53,7 @@ class Snapshot(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.NodeSnapshot import NodeSnapshot
+            from icepyck.generated.NodeSnapshot import NodeSnapshot
             obj = NodeSnapshot()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -92,7 +92,7 @@ class Snapshot(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.MetadataItem import MetadataItem
+            from icepyck.generated.MetadataItem import MetadataItem
             obj = MetadataItem()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -116,7 +116,7 @@ class Snapshot(object):
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 32
-            from generated.ManifestFileInfo import ManifestFileInfo
+            from icepyck.generated.ManifestFileInfo import ManifestFileInfo
             obj = ManifestFileInfo()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -141,7 +141,7 @@ class Snapshot(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from generated.ManifestFileInfoV2 import ManifestFileInfoV2
+            from icepyck.generated.ManifestFileInfoV2 import ManifestFileInfoV2
             obj = ManifestFileInfoV2()
             obj.Init(self._tab.Bytes, x)
             return obj

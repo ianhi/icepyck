@@ -29,7 +29,7 @@ class RepoStatusChangedUpdate(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from generated.RepoStatus import RepoStatus
+            from icepyck.generated.RepoStatus import RepoStatus
             obj = RepoStatus()
             obj.Init(self._tab.Bytes, x)
             return obj

@@ -36,7 +36,7 @@ class CommitAmendedUpdate(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             x = o + self._tab.Pos
-            from generated.ObjectId12 import ObjectId12
+            from icepyck.generated.ObjectId12 import ObjectId12
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -47,7 +47,7 @@ class CommitAmendedUpdate(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             x = o + self._tab.Pos
-            from generated.ObjectId12 import ObjectId12
+            from icepyck.generated.ObjectId12 import ObjectId12
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj

@@ -92,9 +92,31 @@ def create_scalar_repo():
     print(f"Created scalar repo at {path}")
 
 
+def create_native_chunks_repo():
+    """A repo with native (non-inline) chunks stored in chunks/ directory."""
+    path = TEST_DIR / "native-chunks"
+    if path.exists():
+        shutil.rmtree(path)
+
+    storage = icechunk.local_filesystem_storage(str(path))
+    # Setting inline_chunk_threshold_bytes=0 forces all chunks to native storage
+    config = icechunk.RepositoryConfig(inline_chunk_threshold_bytes=0)
+    repo = icechunk.Repository.create(storage, config=config)
+    session = repo.writable_session("main")
+    store = session.store
+
+    root = zarr.group(store)
+    root.create_array("data", shape=(100,), dtype="f4", chunks=(50,))
+    root["data"][:] = np.arange(100, dtype="f4")
+
+    session.commit("native chunks")
+    print(f"Created native-chunks repo at {path}")
+
+
 if __name__ == "__main__":
     TEST_DIR.mkdir(exist_ok=True)
     create_basic_repo()
     create_nested_repo()
     create_scalar_repo()
+    create_native_chunks_repo()
     print("\nAll test repos created. Use these to test your spec-only reader.")
