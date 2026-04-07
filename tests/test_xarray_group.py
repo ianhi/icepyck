@@ -1,10 +1,13 @@
 """Regression test: xr.open_dataset with group= finds all arrays.
 
-Bug: icepyck's IcechunkReadStore only returns 1 of 6 arrays when
-xr.open_dataset is called with group="mygroup", whereas the reference
-icechunk Store returns all arrays correctly.
+Verifies that icepyck's IcechunkReadStore exposes the same data_vars and
+coords as the reference icechunk Store when xr.open_dataset is called with
+a group= parameter pointing at a subgroup containing multiple arrays.
 
-This test should FAIL until the bug is fixed.
+Background: on the ERA5 S3 dataset (group="1x721x1440") icepyck was
+observed to return only 1 of 6 expected arrays.  This test reproduces the
+structure locally so that any regression in list_dir / _node_dir_entries
+handling of grouped stores is caught immediately.
 """
 
 from __future__ import annotations
