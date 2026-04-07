@@ -40,7 +40,7 @@ print(temps[:])  # numpy array
 ```python
 repo = icepyck.open("s3://earthmover-sample-data/icechunk/era5-demo", anon=True)
 session = repo.readonly_session(branch="main")
-ds = xr.open_zarr(session.store)
+ds = xr.open_zarr(session.store, consolidated=False)
 ```
 
 ### Diff two snapshots
