@@ -17,18 +17,12 @@ if TYPE_CHECKING:
     from icepyck.storage import Storage
 
 
-class RepoInfo:
-    """High-level interface for reading an Icechunk repo file.
+def _decode(name: bytes | str) -> str:
+    return name.decode("utf-8") if isinstance(name, bytes) else name
 
-    Parameters
-    ----------
-    path : str or Path
-        Path to the ``repo`` file (e.g. ``$ROOT/repo``).
-        Ignored if *storage* is provided.
-    storage : Storage, optional
-        Storage backend. When provided, reads ``"repo"`` from it
-        and *path* is ignored.
-    """
+
+class RepoInfo:
+    """High-level interface for reading an Icechunk repo file."""
 
     def __init__(
         self,
@@ -51,7 +45,6 @@ class RepoInfo:
                 f"got {header.file_type}"
             )
 
-        self._header = header
         buf = bytearray(payload)
         self._repo = Repo.GetRootAs(buf, 0)
 
@@ -64,90 +57,35 @@ class RepoInfo:
 
     def list_branches(self) -> list[str]:
         """Return the names of all branches."""
-        branches = []
-        for i in range(self._repo.BranchesLength()):
-            ref = self._repo.Branches(i)
-            name = ref.Name()
-            branches.append(name.decode("utf-8") if isinstance(name, bytes) else name)
-        return branches
+        return [
+            _decode(self._repo.Branches(i).Name())
+            for i in range(self._repo.BranchesLength())
+        ]
 
     def list_tags(self) -> list[str]:
         """Return the names of all tags."""
-        tags = []
-        for i in range(self._repo.TagsLength()):
-            ref = self._repo.Tags(i)
-            name = ref.Name()
-            tags.append(name.decode("utf-8") if isinstance(name, bytes) else name)
-        return tags
+        return [
+            _decode(self._repo.Tags(i).Name())
+            for i in range(self._repo.TagsLength())
+        ]
 
     def get_snapshot_id(self, branch_name: str) -> bytes:
-        """Get the 12-byte snapshot ID for the given branch.
-
-        Parameters
-        ----------
-        branch_name : str
-            Name of the branch (e.g. ``"main"``).
-
-        Returns
-        -------
-        bytes
-            The 12-byte ObjectId12 for the branch's current snapshot.
-
-        Raises
-        ------
-        KeyError
-            If the branch is not found.
-        """
+        """Get the 12-byte snapshot ID for the given branch."""
         for i in range(self._repo.BranchesLength()):
             ref = self._repo.Branches(i)
-            name = ref.Name()
-            if isinstance(name, bytes):
-                name = name.decode("utf-8")
-            if name == branch_name:
-                idx: int = ref.SnapshotIndex()
-                return bytes(self._snapshot_ids[idx])
+            if _decode(ref.Name()) == branch_name:
+                return bytes(self._snapshot_ids[ref.SnapshotIndex()])
         raise KeyError(f"Branch not found: {branch_name!r}")
 
     def get_tag_snapshot_id(self, tag_name: str) -> bytes:
-        """Get the 12-byte snapshot ID for the given tag.
-
-        Parameters
-        ----------
-        tag_name : str
-            Name of the tag (e.g. ``"v1"``).
-
-        Returns
-        -------
-        bytes
-            The 12-byte ObjectId12 for the tag's snapshot.
-
-        Raises
-        ------
-        KeyError
-            If the tag is not found.
-        """
+        """Get the 12-byte snapshot ID for the given tag."""
         for i in range(self._repo.TagsLength()):
             ref = self._repo.Tags(i)
-            name = ref.Name()
-            if isinstance(name, bytes):
-                name = name.decode("utf-8")
-            if name == tag_name:
-                idx: int = ref.SnapshotIndex()
-                return bytes(self._snapshot_ids[idx])
+            if _decode(ref.Name()) == tag_name:
+                return bytes(self._snapshot_ids[ref.SnapshotIndex()])
         raise KeyError(f"Tag not found: {tag_name!r}")
 
     @staticmethod
     def snapshot_id_to_path(snapshot_id: bytes) -> str:
-        """Convert a 12-byte snapshot ID to its Crockford Base32 filename.
-
-        Parameters
-        ----------
-        snapshot_id : bytes
-            The 12-byte ObjectId12.
-
-        Returns
-        -------
-        str
-            The Crockford Base32 encoded string used as the filename.
-        """
+        """Convert a 12-byte snapshot ID to its Crockford Base32 filename."""
         return crockford_encode(snapshot_id)

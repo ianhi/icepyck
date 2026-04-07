@@ -38,16 +38,7 @@ class NodeInfo:
 
 
 class SnapshotReader:
-    """Read and interpret an Icechunk snapshot file.
-
-    Parameters
-    ----------
-    root_path : str or Path
-        Root path of the Icechunk repository (the directory containing
-        ``snapshots/``, ``manifests/``, etc.).
-    snapshot_id : bytes
-        The 12-byte ObjectId12 identifying the snapshot.
-    """
+    """Read and interpret an Icechunk snapshot file."""
 
     def __init__(
         self,
@@ -67,11 +58,9 @@ class SnapshotReader:
             raw = storage.read(f"snapshots/{snapshot_name}")
             header, payload = parse_bytes(raw)
         elif root_path is not None:
-            from pathlib import Path as _Path
+            from pathlib import Path
 
-            self._root_path: Path | None = _Path(root_path)
-            snapshot_path = self._root_path / "snapshots" / snapshot_name
-            header, payload = parse_file(snapshot_path)
+            header, payload = parse_file(Path(root_path) / "snapshots" / snapshot_name)
         else:
             raise TypeError("Either root_path or storage must be provided")
         if header.file_type != FileType.SNAPSHOT:
@@ -81,14 +70,14 @@ class SnapshotReader:
             )
 
         buf = bytearray(payload)
-        self._snapshot = Snapshot.GetRootAs(buf, 0)
+        snapshot = Snapshot.GetRootAs(buf, 0)
 
         # Parse all nodes upfront
         self._nodes: list[NodeInfo] = []
         self._array_nodes: dict[str, NodeInfo] = {}  # path -> NodeInfo
 
-        for i in range(self._snapshot.NodesLength()):
-            node = self._snapshot.Nodes(i)
+        for i in range(snapshot.NodesLength()):
+            node = snapshot.Nodes(i)
 
             # Path
             raw_path = node.Path()
@@ -157,23 +146,7 @@ class SnapshotReader:
         return list(self._nodes)
 
     def get_array_manifest_refs(self, path: str) -> list[ManifestRefInfo]:
-        """Get manifest refs for an array node by its path.
-
-        Parameters
-        ----------
-        path : str
-            The node path (e.g. ``"/group1/temperatures"``).
-
-        Returns
-        -------
-        list[ManifestRefInfo]
-            The manifest references for this array.
-
-        Raises
-        ------
-        KeyError
-            If the path is not found or is not an array node.
-        """
+        """Get manifest refs for an array node by its path."""
         if path not in self._array_nodes:
             raise KeyError(f"Array node not found: {path!r}")
         return self._array_nodes[path].manifest_refs

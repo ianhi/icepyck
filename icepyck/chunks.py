@@ -23,30 +23,7 @@ def read_chunk(
     *,
     storage: Storage | None = None,
 ) -> bytes:
-    """Read chunk data based on the ChunkRefInfo.
-
-    Parameters
-    ----------
-    root_path : str or Path or None
-        Root path of the Icechunk repository.  Ignored when *storage*
-        is provided.
-    chunk_ref : ChunkRefInfo
-        The chunk reference describing where the data is.
-    storage : Storage, optional
-        Storage backend to read from.
-
-    Returns
-    -------
-    bytes
-        The raw chunk data bytes.
-
-    Raises
-    ------
-    NotImplementedError
-        If the chunk is virtual (remote URL).
-    ValueError
-        If the chunk type is unknown or data is missing.
-    """
+    """Read chunk data from inline storage or a native chunk file."""
     if chunk_ref.chunk_type == ChunkType.INLINE:
         if chunk_ref.inline_data is None:
             return b""
@@ -59,10 +36,9 @@ def read_chunk(
         if storage is not None:
             raw = storage.read(f"chunks/{chunk_name}")
         elif root_path is not None:
-            from pathlib import Path as _Path
+            from pathlib import Path
 
-            chunk_path = _Path(root_path) / "chunks" / chunk_name
-            raw = chunk_path.read_bytes()
+            raw = (Path(root_path) / "chunks" / chunk_name).read_bytes()
         else:
             raise TypeError("Either root_path or storage must be provided")
         if chunk_ref.length > 0:

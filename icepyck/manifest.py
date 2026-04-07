@@ -44,15 +44,7 @@ class ChunkRefInfo:
 
 
 class ManifestReader:
-    """Read and interpret an Icechunk manifest file.
-
-    Parameters
-    ----------
-    root_path : str or Path
-        Root path of the Icechunk repository.
-    manifest_id : bytes
-        The 12-byte ObjectId12 identifying the manifest.
-    """
+    """Read and interpret an Icechunk manifest file."""
 
     def __init__(
         self,
@@ -70,11 +62,9 @@ class ManifestReader:
             raw = storage.read(f"manifests/{manifest_name}")
             header, payload = parse_bytes(raw)
         elif root_path is not None:
-            from pathlib import Path as _Path
+            from pathlib import Path
 
-            self._root_path: Path | None = _Path(root_path)
-            manifest_path = self._root_path / "manifests" / manifest_name
-            header, payload = parse_file(manifest_path)
+            header, payload = parse_file(Path(root_path) / "manifests" / manifest_name)
         else:
             raise TypeError("Either root_path or storage must be provided")
         if header.file_type != FileType.MANIFEST:
@@ -84,13 +74,13 @@ class ManifestReader:
             )
 
         buf = bytearray(payload)
-        self._manifest = Manifest.GetRootAs(buf, 0)
+        manifest = Manifest.GetRootAs(buf, 0)
 
         # Build a lookup from node_id bytes -> list of ChunkRefInfo
         self._arrays: dict[bytes, list[ChunkRefInfo]] = {}
 
-        for i in range(self._manifest.ArraysLength()):
-            arr = self._manifest.Arrays(i)
+        for i in range(manifest.ArraysLength()):
+            arr = manifest.Arrays(i)
 
             # Node ID (8 bytes)
             nid_obj = arr.NodeId()
@@ -158,23 +148,7 @@ class ManifestReader:
             self._arrays[node_id] = refs
 
     def get_chunk_refs(self, node_id: bytes) -> list[ChunkRefInfo]:
-        """Get all chunk refs for a specific array by its 8-byte node ID.
-
-        Parameters
-        ----------
-        node_id : bytes
-            The 8-byte ObjectId8 of the array node.
-
-        Returns
-        -------
-        list[ChunkRefInfo]
-            The chunk references for this array.
-
-        Raises
-        ------
-        KeyError
-            If no array with this node ID is found in this manifest.
-        """
+        """Get all chunk refs for an array by its 8-byte node ID."""
         if node_id not in self._arrays:
             raise KeyError(
                 f"Node ID {node_id.hex()} not found in manifest "
