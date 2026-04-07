@@ -142,7 +142,8 @@ class IcechunkReadStore(Store):
         super().__init__(read_only=True)
         self._root_path = root_path
         self._storage = storage
-        assert snapshot is not None
+        if snapshot is None:
+            raise TypeError("snapshot must be provided")
         self._snapshot = snapshot
 
         # Pre-build lookup structures
@@ -244,7 +245,8 @@ class IcechunkReadStore(Store):
             return node.user_data if node.user_data else None
 
         # kind is a chunk coordinate tuple
-        assert isinstance(kind, tuple)
+        if not isinstance(kind, tuple):
+            return None
         chunk_coords: tuple[int, ...] = kind
 
         if node.node_type != "array":
@@ -258,23 +260,6 @@ class IcechunkReadStore(Store):
         from icepyck.chunks import read_chunk
 
         return read_chunk(self._root_path, cref, storage=self._storage)
-
-    def _resolve_chunk_ref(
-        self, key: str
-    ) -> ChunkRefInfo | None:
-        """Resolve a zarr key to a ChunkRefInfo without reading data.
-
-        Returns *None* for metadata keys, unknown keys, missing nodes,
-        or chunks that don't exist in the manifests.
-        """
-        node_path, kind = _parse_key(key)
-        if kind == "unknown" or kind == "metadata":
-            return None
-        node = self._nodes_by_path.get(node_path)
-        if node is None or node.node_type != "array":
-            return None
-        assert isinstance(kind, tuple)
-        return self._find_chunk_ref(node_path, node, kind)
 
     async def _aget(
         self,
@@ -300,7 +285,8 @@ class IcechunkReadStore(Store):
             return prototype.buffer.from_bytes(data)
 
         # Chunk coordinate tuple
-        assert isinstance(kind, tuple)
+        if not isinstance(kind, tuple):
+            return None
         chunk_coords: tuple[int, ...] = kind
 
         if node.node_type != "array":

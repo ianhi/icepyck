@@ -183,8 +183,8 @@ class Repository:
         elif tag is not None:
             ref = tag
         else:
-            assert snapshot is not None
-            ref = snapshot
+            # snapshot is not None — guaranteed by the `specified == 1` check above
+            ref = snapshot  # type: ignore[assignment]
         snapshot_id = self._resolve_ref(ref)
         return Session(self, snapshot_id)
 
