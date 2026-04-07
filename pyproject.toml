@@ -1,8 +1,8 @@
 [project]
 name = "icepyck"
 version = "0.1.0"
-description = "Add your description here"
-readme = "PROMPT.md"
+description = "Read-only Python client for Icechunk, built from the spec"
+readme = "README.md"
 authors = [
     { name = "Ian Hunt-Isaak", email = "ianhuntisaak@gmail.com" }
 ]

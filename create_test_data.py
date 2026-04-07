@@ -113,10 +113,38 @@ def create_native_chunks_repo():
     print(f"Created native-chunks repo at {path}")
 
 
+def create_many_commits_repo():
+    """A repo with many commits to test ops log overflow and overwritten/ directory.
+
+    Uses num_updates_per_repo_info_file=5 so the ops log overflows after 5 updates,
+    creating backup files in overwritten/ and exercising the linked list chain.
+    """
+    path = TEST_DIR / "many-commits"
+    if path.exists():
+        shutil.rmtree(path)
+
+    storage = icechunk.local_filesystem_storage(str(path))
+    config = icechunk.RepositoryConfig(num_updates_per_repo_info_file=5)
+    repo = icechunk.Repository.create(storage, config=config)
+
+    for i in range(15):
+        session = repo.writable_session("main")
+        store = session.store
+        if i == 0:
+            root = zarr.group(store)
+            root.create_array("counter", shape=(1,), dtype="i4", chunks=(1,))
+        root = zarr.open_group(store=store)
+        root["counter"][0] = i
+        session.commit(f"commit {i}")
+
+    print(f"Created many-commits repo at {path} (15 commits, overflow at 5)")
+
+
 if __name__ == "__main__":
     TEST_DIR.mkdir(exist_ok=True)
     create_basic_repo()
     create_nested_repo()
     create_scalar_repo()
     create_native_chunks_repo()
+    create_many_commits_repo()
     print("\nAll test repos created. Use these to test your spec-only reader.")
