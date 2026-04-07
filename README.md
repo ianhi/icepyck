@@ -1,8 +1,8 @@
 # 🧊⛏️ icepyck
 
-**Can you build an Icechunk reader from just the spec?**
+**Can you build an Icechunk client from just the spec?**
 
-This project answers that question. A coding agent (Claude) was given the [Icechunk specification](https://icechunk.io/en/latest/spec/), the flatbuffers schemas, and test data — no Rust or Python source code — and asked to build a working reader. The result is a pure-Python read-only Icechunk client that provides a zarr v3 `Store`, so you can read any Icechunk repository with standard zarr/xarray tooling.
+This project answers that question. A coding agent (Claude) was given the [Icechunk specification](https://icechunk.io/en/latest/spec/), the flatbuffers schemas, and test data — no Rust or Python source code — and asked to build a working client. The result is a pure-Python read-only Icechunk client that provides a zarr v3 `Store`, so you can read any Icechunk repository with standard zarr/xarray tooling.
 
 The real output isn't the library. It's the log of every spec gap and confusion moment found along the way.
 
