@@ -35,6 +35,19 @@ def open(
         storage: Storage = S3Storage(path_str, anon=anon, **storage_kwargs)
     else:
         storage = LocalStorage(path_str)
+
+    if not storage.exists("repo"):
+        # Check for V1 layout (refs/ directory instead of repo file)
+        if storage.exists("refs") or len(storage.list_prefix("refs")) > 0:
+            raise FileNotFoundError(
+                f"No 'repo' file found at {path_str!r}. "
+                f"Found a 'refs/' directory — this looks like an Icechunk V1 "
+                f"repository. icepyck only supports V2 repositories."
+            )
+        raise FileNotFoundError(
+            f"No 'repo' file found at {path_str!r}. "
+            f"Is this an Icechunk repository?"
+        )
     return Repository(storage=storage)
 
 

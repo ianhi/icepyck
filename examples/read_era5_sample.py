@@ -1,7 +1,8 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#     "icepyck[s3]",
+#     "icepyck",
+#     "s3fs",
 #     "zarr>=3",
 #     "xarray",
 #     "numpy",
@@ -11,18 +12,30 @@
 # prerelease = "allow"
 # ///
 """
-Read ERA5 sample data from icechunk's public S3 repository.
+Read from an S3-hosted icechunk repository.
 
-This demonstrates reading a real-world icechunk dataset hosted on S3.
-The ERA5 sample dataset is listed at https://icechunk.io/en/latest/sample-datasets/
+NOTE: The public sample datasets at earthmover-sample-data are V1 repos.
+icepyck only supports V2. This example uses a local repo but demonstrates
+the S3 API. To read from a real V2 S3 repo, replace the URL below.
 """
 
-import icepyck
-import xarray as xr
+from pathlib import Path
 
-# Open the public ERA5 sample dataset (anonymous S3 access)
-repo = icepyck.open("s3://earthmover-sample-data/icechunk/era5-demo", anon=True)
+import icepyck
+import zarr
+
+# Demonstrate the S3 API with a local repo (since public samples are V1)
+ROOT = Path(__file__).resolve().parent.parent
+repo = icepyck.open(ROOT / "test-repos" / "native-chunks")
 session = repo.readonly_session(branch="main")
-ds = xr.open_zarr(session.store)
-print(ds)
-print(ds["2m_temperature"].sel(time="2020-01-01", method="nearest"))
+
+root = zarr.open_group(store=session.store, mode="r")
+print("Arrays:", list(root.keys()))
+arr = root["data"]
+print(f"data: dtype={arr.dtype}, shape={arr.shape}")
+print(f"values: {arr[:]}")
+
+# To read from S3, you would do:
+# repo = icepyck.open("s3://your-bucket/path/to/v2-repo", anon=True)
+# session = repo.readonly_session(branch="main")
+# ds = xr.open_zarr(session.store)
