@@ -46,10 +46,12 @@ ds = xr.open_zarr(session.store, consolidated=False)
 ### CLI
 
 ```bash
-icepyck info test-repos/basic          # branches, tags, snapshot count
-icepyck tree test-repos/basic          # node tree with shapes and dtypes
+uv tool install -e .  # or: uvx --from . icepyck ...
+
+icepyck dig  test-repos/xarray-air-temp     # full repo explorer
+icepyck tree test-repos/basic               # node tree with shapes
 icepyck diff test-repos/basic main~1 main   # diff two snapshots
-icepyck dig  test-repos/basic          # full repo explorer
+icepyck info test-repos/basic               # branches, tags, snapshots
 ```
 
 ```
