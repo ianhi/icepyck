@@ -2,6 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "icepyck",
+#     "icechunk>=2.0.0a0",
 #     "s3fs",
 #     "zarr>=3",
 #     "xarray",
@@ -11,31 +12,50 @@
 # sources = {icepyck = {path = ".."}}
 # prerelease = "allow"
 # ///
-"""
-Read from an S3-hosted icechunk repository.
+"""Compare icepyck vs icechunk reading ERA5 from S3."""
 
-NOTE: The public sample datasets at earthmover-sample-data are V1 repos.
-icepyck only supports V2. This example uses a local repo but demonstrates
-the S3 API. To read from a real V2 S3 repo, replace the URL below.
-"""
-
-from pathlib import Path
+import icechunk
+import xarray as xr
 
 import icepyck
-import zarr
 
-# Demonstrate the S3 API with a local repo (since public samples are V1)
-ROOT = Path(__file__).resolve().parent.parent
-repo = icepyck.open(ROOT / "test-repos" / "native-chunks")
-session = repo.readonly_session(branch="main")
+URL = "s3://icechunk-public-data/v1/era5_weatherbench2"
+GROUP = "1x721x1440"
+OPEN_KW = dict(group=GROUP, engine="zarr", chunks=None, consolidated=False)
 
-root = zarr.open_group(store=session.store, mode="r")
-print("Arrays:", list(root.keys()))
-arr = root["data"]
-print(f"data: dtype={arr.dtype}, shape={arr.shape}")
-print(f"values: {arr[:]}")
+# --- icepyck ---
+print("Opening with icepyck...")
+pyck_repo = icepyck.open(URL, anon=True)
+pyck_session = pyck_repo.readonly_session(branch="main")
+ds_pyck = xr.open_dataset(pyck_session.store, **OPEN_KW)
+print(f"icepyck: {dict(ds_pyck.sizes)}")
+print(f"  coords: {sorted(ds_pyck.coords)}")
+print(f"  data_vars: {sorted(ds_pyck.data_vars)}")
 
-# To read from S3, you would do:
-# repo = icepyck.open("s3://your-bucket/path/to/v2-repo", anon=True)
-# session = repo.readonly_session(branch="main")
-# ds = xr.open_zarr(session.store)
+# --- icechunk ---
+print("\nOpening with icechunk...")
+storage = icechunk.s3_storage(
+    bucket="icechunk-public-data",
+    prefix="v1/era5_weatherbench2",
+    region="us-east-1",
+    anonymous=True,
+)
+ic_repo = icechunk.Repository.open(storage=storage)
+ic_session = ic_repo.readonly_session("main")
+ds_ic = xr.open_dataset(ic_session.store, **OPEN_KW)
+print(f"icechunk: {dict(ds_ic.sizes)}")
+print(f"  coords: {sorted(ds_ic.coords)}")
+print(f"  data_vars: {sorted(ds_ic.data_vars)}")
+
+# --- Compare ---
+print("\n--- Comparison ---")
+assert dict(ds_pyck.sizes) == dict(ds_ic.sizes), f"dims differ: {ds_pyck.sizes} vs {ds_ic.sizes}"
+assert sorted(ds_pyck.coords) == sorted(ds_ic.coords), f"coords differ"
+assert sorted(ds_pyck.data_vars) == sorted(ds_ic.data_vars), f"data_vars differ"
+assert ds_pyck.attrs == ds_ic.attrs, f"attrs differ"
+
+print("dims: MATCH")
+print("coords: MATCH")
+print("data_vars: MATCH")
+print("attrs: MATCH")
+print("\nAll metadata matches!")
