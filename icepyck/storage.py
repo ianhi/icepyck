@@ -73,15 +73,22 @@ class S3Storage:
             anon=anon, asynchronous=True, **s3_kwargs
         )
         self._root = url.removeprefix("s3://").rstrip("/")
+        self._cache: dict[str, bytes] = {}
 
     def read(self, path: str) -> bytes:
-        full = f"{self._root}/{path}"
-        return self._sync_fs.cat_file(full)  # type: ignore[no-any-return]
+        if path not in self._cache:
+            self._cache[path] = self._sync_fs.cat_file(  # type: ignore[no-any-return]
+                f"{self._root}/{path}"
+            )
+        return self._cache[path]
 
     async def aread(self, path: str) -> bytes:
         """Async read using the async-mode s3fs instance."""
-        full = f"{self._root}/{path}"
-        return await self._async_fs._cat_file(full)  # type: ignore[no-any-return]
+        if path not in self._cache:
+            self._cache[path] = await self._async_fs._cat_file(  # type: ignore[no-any-return]
+                f"{self._root}/{path}"
+            )
+        return self._cache[path]
 
     def exists(self, path: str) -> bool:
         return self._sync_fs.exists(f"{self._root}/{path}")  # type: ignore[no-any-return]
