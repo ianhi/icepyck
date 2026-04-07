@@ -68,6 +68,56 @@ def _load_chunk_refs(
     return result
 
 
+def show_snapshot(
+    repo_path: str | Path,
+    ref: str,
+) -> SnapshotDiff:
+    """Show what changed in a single snapshot vs its parent.
+
+    Like ``git show`` — diffs the snapshot against its parent.
+    For the initial commit, all nodes appear as added.
+
+    Parameters
+    ----------
+    repo_path : str or Path
+        Root path of the Icechunk repository.
+    ref : str
+        Reference to the snapshot (branch, tag, short ID, etc.).
+    """
+    root = Path(repo_path)
+    repo = RepoInfo(root / "repo")
+
+    snapshot_id = _resolve_ref(repo, ref)
+
+    # Find parent
+    id_to_idx: dict[bytes, int] = {}
+    for i, sid in enumerate(repo._snapshot_ids):
+        id_to_idx[sid] = i
+
+    idx = id_to_idx.get(snapshot_id)
+    if idx is None:
+        raise KeyError(f"Snapshot not found: {ref!r}")
+
+    snap_info = repo._repo.Snapshots(idx)
+    parent_idx = snap_info.ParentOffset()
+
+    from icepyck.crockford import encode as crockford_encode
+
+    ref_label = crockford_encode(snapshot_id)[:12]
+
+    if parent_idx < 0:
+        # Initial commit — diff against empty
+        new_snapshot = SnapshotReader(root, snapshot_id)
+        diff = SnapshotDiff(old_ref="(empty)", new_ref=ref_label)
+        for node in new_snapshot.list_nodes():
+            diff.added_nodes.append(node)
+        return diff
+
+    parent_id = repo._snapshot_ids[parent_idx]
+    parent_label = crockford_encode(parent_id)[:12]
+    return diff_snapshots(repo_path, parent_label, ref_label)
+
+
 def diff_snapshots(
     repo_path: str | Path,
     old_ref: str,
@@ -187,14 +237,40 @@ def _resolve_ref(repo: RepoInfo, ref: str) -> bytes:
         return repo.get_tag_snapshot_id(ref)
     except KeyError:
         pass
-    # Try hex ID
+    # Try hex ID (full 24-char hex = 12 bytes)
     try:
         raw = bytes.fromhex(ref)
         if len(raw) == 12:
             return raw
     except ValueError:
         pass
+    # Try Crockford Base32 prefix match (short snapshot IDs)
+    match = _resolve_crockford_prefix(repo, ref)
+    if match is not None:
+        return match
     raise KeyError(f"Could not resolve ref: {ref!r}")
+
+
+def _resolve_crockford_prefix(
+    repo: RepoInfo, prefix: str
+) -> bytes | None:
+    """Match a Crockford Base32 prefix against known snapshot IDs."""
+    from icepyck.crockford import encode as crockford_encode
+
+    prefix_upper = prefix.upper()
+    matches = []
+    for sid in repo._snapshot_ids:
+        full = crockford_encode(sid)
+        if full.startswith(prefix_upper):
+            matches.append(sid)
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise KeyError(
+            f"Ambiguous ref {prefix!r}: matches "
+            f"{len(matches)} snapshots"
+        )
+    return None
 
 
 def _get_ancestor(repo: RepoInfo, snapshot_id: bytes, generations: int) -> bytes:
