@@ -198,6 +198,47 @@ class IcechunkReadStore(Store):
             )
         return self._manifest_cache[manifest_id]
 
+    async def _aget_manifest(self, manifest_id: bytes) -> ManifestReader:
+        """Async version of _get_manifest.
+
+        When the storage backend has an ``aread()`` method (e.g. S3), fetches
+        the manifest file without blocking the asyncio event loop so that
+        multiple manifest fetches can run concurrently.
+        """
+        if manifest_id in self._manifest_cache:
+            return self._manifest_cache[manifest_id]
+
+        from icepyck.manifest import ManifestReader as MR
+
+        if self._storage is not None and hasattr(self._storage, "aread"):
+            manifest = await MR.afrom_storage(manifest_id, self._storage)
+        else:
+            manifest = MR(self._root_path, manifest_id, storage=self._storage)
+        self._manifest_cache[manifest_id] = manifest
+        return manifest
+
+    async def prefetch_manifests(self) -> None:
+        """Concurrently pre-load all manifests referenced by every array node.
+
+        Calling this before zarr reads coordinate arrays eliminates blocking
+        S3 GETs from inside the async ``get()`` path: manifests are already
+        in ``_manifest_cache`` so ``_afind_chunk_ref`` finds them immediately.
+
+        Safe to call multiple times; already-cached manifests are skipped.
+        """
+        # Collect every unique manifest_id across all array nodes.
+        manifest_ids = {
+            mref.manifest_id
+            for node in self._snapshot.list_nodes()
+            if node.node_type == "array"
+            for mref in node.manifest_refs
+            if mref.manifest_id not in self._manifest_cache
+        }
+        if manifest_ids:
+            await asyncio.gather(
+                *(self._aget_manifest(mid) for mid in manifest_ids)
+            )
+
     def _find_chunk_ref(
         self,
         node_path: str,
@@ -220,6 +261,39 @@ class IcechunkReadStore(Store):
                 continue
             # This manifest covers our chunk — load it
             manifest = self._get_manifest(mref.manifest_id)
+            # Cache all refs from this manifest
+            for cref in manifest.get_chunk_refs(node.node_id):
+                self._chunk_index[(node_path, cref.index)] = cref
+            # Check if our chunk is in this manifest
+            result = self._chunk_index.get((node_path, chunk_coords))
+            if result is not None:
+                return result
+
+        return None
+
+    async def _afind_chunk_ref(
+        self,
+        node_path: str,
+        node: NodeInfo,
+        chunk_coords: tuple[int, ...],
+    ) -> ChunkRefInfo | None:
+        """Async version of _find_chunk_ref.
+
+        Uses ``_aget_manifest`` so manifest fetches don't block the event loop
+        on S3 backends.  Once manifests are in the cache the result is
+        identical to the sync path.
+        """
+        # Check chunk index cache first (populated after first manifest load)
+        cached = self._chunk_index.get((node_path, chunk_coords))
+        if cached is not None:
+            return cached
+
+        # Find which manifest covers these coords using extents
+        for mref in node.manifest_refs:
+            if not _extents_contain(mref.extents, chunk_coords):
+                continue
+            # Load manifest asynchronously — no-op if already cached
+            manifest = await self._aget_manifest(mref.manifest_id)
             # Cache all refs from this manifest
             for cref in manifest.get_chunk_refs(node.node_id):
                 self._chunk_index[(node_path, cref.index)] = cref
@@ -292,7 +366,7 @@ class IcechunkReadStore(Store):
         if node.node_type != "array":
             return None
 
-        cref = self._find_chunk_ref(node_path, node, chunk_coords)
+        cref = await self._afind_chunk_ref(node_path, node, chunk_coords)
         if cref is None:
             return None
 
