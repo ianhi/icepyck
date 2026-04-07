@@ -1,0 +1,17 @@
+[project]
+name = "icepyck"
+version = "0.1.0"
+description = "Add your description here"
+readme = "PROMPT.md"
+authors = [
+    { name = "Ian Hunt-Isaak", email = "ianhuntisaak@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "flatbuffers",
+    "zstandard",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
