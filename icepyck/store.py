@@ -292,7 +292,7 @@ class IcechunkReadStore(Store):
         prototype: BufferPrototype,
         byte_range: ByteRequest | None = None,
     ) -> Buffer | None:
-        data = await self._aresolve_key(key)
+        data = self._resolve_key(key)
         if data is None:
             return None
         data = _apply_byte_range(data, byte_range)
@@ -334,25 +334,120 @@ class IcechunkReadStore(Store):
                         yield f"c/{idx_str}"
 
     async def list_prefix(self, prefix: str) -> AsyncGenerator[str, None]:
-        async for key in self.list():
-            if key.startswith(prefix):
+        # If prefix is outside any chunk namespace, serve entirely from node tree.
+        # Otherwise, fall back to full list() for the matching chunk keys only.
+        chunk_prefix = self._chunk_prefix_for(prefix)
+        if chunk_prefix is None:
+            # No chunk namespace involved — yield metadata keys from node tree.
+            for key in self._node_keys_with_prefix(prefix):
                 yield key
+        else:
+            # prefix touches a chunk subtree; enumerate only the matching chunks.
+            node_path, node = chunk_prefix
+            zarr_prefix = "" if node_path == "/" else node_path.lstrip("/")
+            base = (f"{zarr_prefix}/c/" if zarr_prefix else "c/")
+            for idx_str in _iter_chunk_keys_from_metadata(node.user_data):  # type: ignore[arg-type]
+                key = f"{base}{idx_str}"
+                if key.startswith(prefix):
+                    yield key
 
     async def list_dir(self, prefix: str) -> AsyncGenerator[str, None]:
         if prefix and not prefix.endswith("/"):
             prefix = prefix + "/"
 
-        seen: set[str] = set()
-        async for key in self.list():
-            if prefix and not key.startswith(prefix):
-                continue
-            remainder = key[len(prefix) :]
-            # Immediate child: either a leaf or a directory prefix
-            if "/" in remainder:
-                child = remainder.split("/")[0]
-                entry = child + "/"  # directory marker
-            else:
-                entry = remainder
-            if entry and entry not in seen:
-                seen.add(entry)
+        chunk_prefix = self._chunk_prefix_for(prefix)
+        if chunk_prefix is None:
+            # Fast path: serve from node tree without touching chunk keys.
+            for entry in self._node_dir_entries(prefix):
                 yield entry
+        else:
+            # Inside a chunk subtree — compute children from array shape.
+            node_path, node = chunk_prefix
+            zarr_prefix = "" if node_path == "/" else node_path.lstrip("/")
+            chunk_base = f"{zarr_prefix}/c/" if zarr_prefix else "c/"
+            seen: set[str] = set()
+            for idx_str in _iter_chunk_keys_from_metadata(node.user_data):  # type: ignore[arg-type]
+                full_key = f"{chunk_base}{idx_str}"
+                if not full_key.startswith(prefix):
+                    continue
+                remainder = full_key[len(prefix):]
+                entry = remainder.split("/")[0] + "/" if "/" in remainder else remainder
+                if entry and entry not in seen:
+                    seen.add(entry)
+                    yield entry
+
+    # ------------------------------------------------------------------
+    # Helpers for fast node-tree traversal (no chunk enumeration)
+    # ------------------------------------------------------------------
+
+    def _icechunk_path_to_zarr_prefix(self, ic_path: str) -> str:
+        """Convert an icechunk node path like ``/group1`` to zarr prefix ``group1/``."""
+        if ic_path == "/":
+            return ""
+        return ic_path.lstrip("/") + "/"
+
+    def _chunk_prefix_for(
+        self, prefix: str
+    ) -> tuple[str, NodeInfo] | None:
+        """Return *(node_path, node)* if *prefix* falls inside a chunk subtree.
+
+        A chunk subtree is ``<array_zarr_prefix>c/``.  Returns *None* when the
+        prefix does not overlap with any array's chunk namespace.
+        """
+        for node_path, node in self._nodes_by_path.items():
+            if node.node_type != "array" or not node.user_data:
+                continue
+            zarr_prefix = self._icechunk_path_to_zarr_prefix(node_path)
+            chunk_ns = f"{zarr_prefix}c/"
+            # Only match when prefix is inside the chunk namespace
+            # e.g. prefix="group1/arr/c/" or "group1/arr/c/0/"
+            if prefix.startswith(chunk_ns):
+                return node_path, node
+        return None
+
+    def _node_keys_with_prefix(self, prefix: str) -> list[str]:
+        """Return all metadata keys (zarr.json) that start with *prefix*."""
+        keys: list[str] = []
+        for ic_path, node in self._nodes_by_path.items():
+            if not node.user_data:
+                continue
+            zarr_prefix = self._icechunk_path_to_zarr_prefix(ic_path)
+            key = zarr_prefix + "zarr.json" if zarr_prefix else "zarr.json"
+            if key.startswith(prefix):
+                keys.append(key)
+        return keys
+
+    def _node_dir_entries(self, prefix: str) -> list[str]:
+        """Return immediate directory children of *prefix* from the node tree only.
+
+        Does not enumerate chunk keys.  The returned entries are either plain
+        file names (``zarr.json``) or directory markers (``subgroup/``).
+        """
+        seen: set[str] = set()
+        entries: list[str] = []
+
+        for ic_path, node in self._nodes_by_path.items():
+            if not node.user_data:
+                continue
+            zarr_prefix = self._icechunk_path_to_zarr_prefix(ic_path)
+            # The metadata file for this node
+            meta_key = zarr_prefix + "zarr.json" if zarr_prefix else "zarr.json"
+
+            if meta_key.startswith(prefix):
+                remainder = meta_key[len(prefix):]
+                entry = remainder.split("/")[0] + "/" if "/" in remainder else remainder
+                if entry and entry not in seen:
+                    seen.add(entry)
+                    entries.append(entry)
+
+            # For array nodes, also expose the "c/" directory marker
+            if node.node_type == "array":
+                chunk_ns_key = zarr_prefix + "c/"  # e.g. "group1/arr/c/"
+                if chunk_ns_key.startswith(prefix) or prefix.startswith(chunk_ns_key):
+                    remainder = chunk_ns_key[len(prefix):]
+                    entry = remainder.split("/")[0] + "/" if remainder else ""
+                    if entry and entry not in seen:
+                        seen.add(entry)
+                        entries.append(entry)
+
+        return entries
