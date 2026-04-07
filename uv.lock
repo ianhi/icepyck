@@ -365,13 +365,9 @@ source = { editable = "." }
 dependencies = [
     { name = "flatbuffers" },
     { name = "rich" },
+    { name = "s3fs" },
     { name = "zarr" },
     { name = "zstandard" },
-]
-
-[package.optional-dependencies]
-s3 = [
-    { name = "s3fs" },
 ]
 
 [package.dev-dependencies]
@@ -389,11 +385,10 @@ dev = [
 requires-dist = [
     { name = "flatbuffers" },
     { name = "rich", specifier = ">=14.3.3" },
-    { name = "s3fs", marker = "extra == 's3'" },
+    { name = "s3fs" },
     { name = "zarr", specifier = ">=3" },
     { name = "zstandard" },
 ]
-provides-extras = ["s3"]
 
 [package.metadata.requires-dev]
 dev = [

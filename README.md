@@ -12,8 +12,6 @@ Every moment of confusion and spec gap was logged as the implementation progress
 
 ```bash
 uv add icepyck
-# For S3 support:
-uv add "icepyck[s3]"
 ```
 
 For development:

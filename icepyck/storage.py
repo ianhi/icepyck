@@ -54,13 +54,8 @@ class S3Storage:
     """
 
     def __init__(self, url: str, anon: bool = False, **s3_kwargs: object) -> None:
-        try:
-            import s3fs  # type: ignore[import-not-found]
-        except ImportError:
-            raise ImportError(
-                "s3fs is required for S3 storage. "
-                "Install it with: pip install icepyck[s3]"
-            ) from None
+        import s3fs  # type: ignore[import-not-found]
+
         self._fs = s3fs.S3FileSystem(anon=anon, **s3_kwargs)
         # Normalize: remove s3:// prefix, ensure no trailing slash
         self._root = url.removeprefix("s3://").rstrip("/")
