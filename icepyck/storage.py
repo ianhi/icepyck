@@ -64,6 +64,11 @@ class S3Storage:
         full = f"{self._root}/{path}"
         return self._fs.cat_file(full)  # type: ignore[no-any-return]
 
+    async def aread(self, path: str) -> bytes:
+        """Async version of read — uses s3fs's native async I/O."""
+        full = f"{self._root}/{path}"
+        return await self._fs._cat_file(full)  # type: ignore[no-any-return]
+
     def exists(self, path: str) -> bool:
         return self._fs.exists(f"{self._root}/{path}")  # type: ignore[no-any-return]
 

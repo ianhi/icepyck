@@ -6,6 +6,9 @@ snapshot/manifest/chunk lookups.
 
 from __future__ import annotations
 
+import json
+import math
+from itertools import product
 from typing import TYPE_CHECKING
 
 from zarr.abc.store import (
@@ -22,7 +25,7 @@ if TYPE_CHECKING:
 
     from zarr.core.buffer import Buffer, BufferPrototype
 
-    from icepyck.manifest import ManifestReader
+    from icepyck.manifest import ChunkRefInfo, ManifestReader
     from icepyck.snapshot import NodeInfo, SnapshotReader
     from icepyck.storage import Storage
 
@@ -78,6 +81,38 @@ def _apply_byte_range(data: bytes, byte_range: ByteRequest | None) -> bytes:
     return data  # pragma: no cover
 
 
+def _iter_chunk_keys_from_metadata(user_data: bytes) -> list[str]:
+    """Derive all chunk key suffixes from zarr metadata without loading manifests.
+
+    Given the zarr.json ``user_data`` for an array node, compute the chunk
+    grid dimensions from ``shape`` and ``chunk_grid`` and enumerate every
+    possible chunk coordinate string (e.g. ``"0/1/2"``).
+
+    For a scalar (0-d) array the single chunk key is the empty string.
+    """
+    meta = json.loads(user_data)
+    shape = meta.get("shape", [])
+
+    if len(shape) == 0:
+        # Scalar array — single chunk with no index components
+        return [""]
+
+    chunk_grid = meta.get("chunk_grid", {})
+    if chunk_grid.get("name") != "regular":
+        return []  # unsupported grid type — fall back to empty
+    chunk_shape = chunk_grid.get("configuration", {}).get("chunk_shape", [])
+    if not chunk_shape or len(chunk_shape) != len(shape):
+        return []
+
+    n_chunks = [
+        math.ceil(s / cs) for s, cs in zip(shape, chunk_shape, strict=True)
+    ]
+    keys: list[str] = []
+    for coords in product(*(range(n) for n in n_chunks)):
+        keys.append("/".join(str(c) for c in coords))
+    return keys
+
+
 class IcechunkReadStore(Store):
     """A read-only zarr v3 :class:`~zarr.abc.store.Store` over an icechunk snapshot."""
 
@@ -101,6 +136,11 @@ class IcechunkReadStore(Store):
 
         # Lazy-loaded manifest cache
         self._manifest_cache: dict[bytes, ManifestReader] = {}
+
+        # Lazy-built chunk index: (node_path, chunk_coords) -> ChunkRefInfo
+        # Populated per-array on first chunk access.
+        self._chunk_index: dict[tuple[str, tuple[int, ...]], ChunkRefInfo] = {}
+        self._chunk_index_built: set[str] = set()  # node paths already indexed
 
         # Mark as open
         self._is_open = True
@@ -142,6 +182,16 @@ class IcechunkReadStore(Store):
             )
         return self._manifest_cache[manifest_id]
 
+    def _build_chunk_index(self, node_path: str, node: NodeInfo) -> None:
+        """Lazily build the chunk index for *node* (loading its manifests)."""
+        if node_path in self._chunk_index_built:
+            return
+        for mref in node.manifest_refs:
+            manifest = self._get_manifest(mref.manifest_id)
+            for cref in manifest.get_chunk_refs(node.node_id):
+                self._chunk_index[(node_path, cref.index)] = cref
+        self._chunk_index_built.add(node_path)
+
     def _resolve_key(self, key: str) -> bytes | None:
         """Synchronously resolve a zarr key to raw bytes, or *None*."""
         node_path, kind = _parse_key(key)
@@ -163,14 +213,74 @@ class IcechunkReadStore(Store):
         if node.node_type != "array":
             return None
 
+        # Lazily build the chunk index for this array on first access
+        self._build_chunk_index(node_path, node)
+
+        cref = self._chunk_index.get((node_path, chunk_coords))
+        if cref is None:
+            return None
+
         from icepyck.chunks import read_chunk
 
-        for mref in node.manifest_refs:
-            manifest = self._get_manifest(mref.manifest_id)
-            for cref in manifest.get_chunk_refs(node.node_id):
-                if cref.index == chunk_coords:
-                    return read_chunk(self._root_path, cref, storage=self._storage)
-        return None
+        return read_chunk(self._root_path, cref, storage=self._storage)
+
+    async def _aresolve_key(self, key: str) -> bytes | None:
+        """Resolve a zarr key, using async I/O for chunk reads."""
+        node_path, kind = _parse_key(key)
+
+        if kind == "unknown":
+            return None
+
+        node = self._nodes_by_path.get(node_path)
+        if node is None:
+            return None
+
+        if kind == "metadata":
+            return node.user_data if node.user_data else None
+
+        assert isinstance(kind, tuple)
+        chunk_coords: tuple[int, ...] = kind
+
+        if node.node_type != "array":
+            return None
+
+        self._build_chunk_index(node_path, node)
+
+        cref = self._chunk_index.get((node_path, chunk_coords))
+        if cref is None:
+            return None
+
+        # Use async read for S3, sync for local
+        if (
+            self._storage is not None
+            and hasattr(self._storage, "aread")
+        ):
+            return await self._aread_chunk(cref)
+
+        from icepyck.chunks import read_chunk
+
+        return read_chunk(self._root_path, cref, storage=self._storage)
+
+    async def _aread_chunk(self, cref: ChunkRefInfo) -> bytes:
+        """Read a chunk using async S3 I/O."""
+        from icepyck.manifest import ChunkType
+
+        if cref.chunk_type == ChunkType.INLINE:
+            return cref.inline_data or b""
+        elif cref.chunk_type == ChunkType.NATIVE:
+            if cref.chunk_id is None:
+                raise ValueError("Native chunk ref has no chunk_id")
+            from icepyck.crockford import encode as crockford_encode
+
+            chunk_name = crockford_encode(cref.chunk_id)
+            path = f"chunks/{chunk_name}"
+            assert self._storage is not None
+            raw = await self._storage.aread(path)
+            if cref.length > 0:
+                return raw[cref.offset : cref.offset + cref.length]
+            return raw[cref.offset :]
+        else:
+            raise NotImplementedError("Virtual chunk async read")
 
     # ------------------------------------------------------------------
     # zarr.abc.store.Store interface
@@ -182,7 +292,7 @@ class IcechunkReadStore(Store):
         prototype: BufferPrototype,
         byte_range: ByteRequest | None = None,
     ) -> Buffer | None:
-        data = self._resolve_key(key)
+        data = await self._aresolve_key(key)
         if data is None:
             return None
         data = _apply_byte_range(data, byte_range)
@@ -213,16 +323,15 @@ class IcechunkReadStore(Store):
                     yield "zarr.json"
                 else:
                     yield node.path.lstrip("/") + "/zarr.json"
-            if node.node_type == "array":
+            if node.node_type == "array" and node.user_data:
                 zarr_prefix = "" if node.path == "/" else node.path.lstrip("/")
-                for mref in node.manifest_refs:
-                    manifest = self._get_manifest(mref.manifest_id)
-                    for cref in manifest.get_chunk_refs(node.node_id):
-                        idx_str = "/".join(str(i) for i in cref.index)
-                        if zarr_prefix:
-                            yield f"{zarr_prefix}/c/{idx_str}"
-                        else:
-                            yield f"c/{idx_str}"
+                # Compute chunk keys from zarr metadata (shape + chunk_grid)
+                # instead of loading manifests — avoids N S3 calls.
+                for idx_str in _iter_chunk_keys_from_metadata(node.user_data):
+                    if zarr_prefix:
+                        yield f"{zarr_prefix}/c/{idx_str}"
+                    else:
+                        yield f"c/{idx_str}"
 
     async def list_prefix(self, prefix: str) -> AsyncGenerator[str, None]:
         async for key in self.list():
