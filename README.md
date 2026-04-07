@@ -43,19 +43,21 @@ session = repo.readonly_session(branch="main")
 ds = xr.open_zarr(session.store, consolidated=False)
 ```
 
-### Diff two snapshots
+### CLI
 
 ```bash
-python -m icepyck.diff_display test-repos/basic main~1 main
+icepyck info test-repos/basic          # branches, tags, snapshot count
+icepyck tree test-repos/basic          # node tree with shapes and dtypes
+icepyck diff test-repos/basic main~1 main   # diff two snapshots
+icepyck dig  test-repos/basic          # full repo explorer
 ```
 
 ```
-╭─── Snapshot Diff: main~1 -> main ───╮
-│ 0 added, 0 removed, 1 modified      │
-╰──────────────────────────────────────╯
-/
-└── group1
-    └── [~] temperatures  (1 chunk changed: (0,))
+⛏️🧊 test-repos/xarray-air-temp @ main
+├── 📊 air int16 [2920, 25, 53] chunks=[730, 13, 27]
+├── 📊 lat float32 [25] chunks=[25]
+├── 📊 lon float32 [53] chunks=[53]
+└── 📊 time float32 [2920] chunks=[2920]
 ```
 
 ## What it can do
