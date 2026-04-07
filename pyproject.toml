@@ -12,6 +12,7 @@ dependencies = [
     "flatbuffers",
     "rich>=14.3.3",
     "s3fs",
+    "textual>=8.2.3",
     "zarr>=3",
     "zstandard",
 ]

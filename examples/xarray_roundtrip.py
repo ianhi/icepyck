@@ -25,6 +25,7 @@ from pathlib import Path
 
 import numpy as np
 import xarray as xr
+import zarr
 
 import icechunk
 import icepyck
@@ -47,7 +48,22 @@ repo = icechunk.Repository.create(storage)
 session = repo.writable_session("main")
 ds_original.to_zarr(session.store, mode="w")
 session.commit("write air_temperature dataset")
-print("  Committed.")
+print("  Committed initial data.")
+
+# --- Step 2b: Second commit — modify some data ---
+print("Writing second commit (modify Jan 2013 temperatures)...")
+session2 = repo.writable_session("main")
+store2 = session2.store
+air = zarr.open_array(store=store2, path="air", mode="r+")
+# Set all January 2013 temps (first ~124 time steps) to 273.15 (0°C)
+air[0:124, :, :] = 273.15
+session2.commit("set Jan 2013 temperatures to 0°C")
+print("  Committed update.")
+
+# Tag the first commit for easy reference
+first_snap = repo.lookup_branch("main")  # this is now the 2nd commit
+repo.create_tag("v1-modified", first_snap)
+print("  Tagged 'v1-modified'.")
 print()
 
 # --- Step 3: Read back with icechunk (reference) ---
@@ -92,6 +108,15 @@ for coord in ds_original.coords:
     else:
         match = np.array_equal(orig, pyck)
     print(f"  coord {coord}: dtype={pyck.dtype} match={match}")
+
+# --- Step 6: Show the diff between commits ---
+print()
+print("Diff between commits:")
+from icepyck.diff import show_snapshot
+from icepyck.diff_display import display_diff
+
+result = show_snapshot(REPO_PATH, "main")
+display_diff(result)
 
 print()
 print("Roundtrip successful!")
