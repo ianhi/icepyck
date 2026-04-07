@@ -62,7 +62,7 @@ print()
 print("Reading back with icepyck...")
 pyck_repo = icepyck.open(REPO_PATH)
 pyck_session = pyck_repo.readonly_session(branch="main")
-ds_icepyck = xr.open_zarr(pyck_session.store)
+ds_icepyck = xr.open_zarr(pyck_session.store, consolidated=False)
 print(f"  {ds_icepyck}")
 print()
 
