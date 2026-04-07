@@ -6,10 +6,13 @@ generated code to expose branch/tag listings and snapshot ID lookups.
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from icepyck.crockford import encode as crockford_encode
 from icepyck.header import FileType, parse_file
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class RepoInfo:
@@ -84,8 +87,8 @@ class RepoInfo:
             if isinstance(name, bytes):
                 name = name.decode("utf-8")
             if name == branch_name:
-                idx = ref.SnapshotIndex()
-                return self._snapshot_ids[idx]
+                idx: int = ref.SnapshotIndex()
+                return bytes(self._snapshot_ids[idx])
         raise KeyError(f"Branch not found: {branch_name!r}")
 
     def get_tag_snapshot_id(self, tag_name: str) -> bytes:
@@ -112,8 +115,8 @@ class RepoInfo:
             if isinstance(name, bytes):
                 name = name.decode("utf-8")
             if name == tag_name:
-                idx = ref.SnapshotIndex()
-                return self._snapshot_ids[idx]
+                idx: int = ref.SnapshotIndex()
+                return bytes(self._snapshot_ids[idx])
         raise KeyError(f"Tag not found: {tag_name!r}")
 
     @staticmethod
