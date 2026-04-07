@@ -6,6 +6,7 @@ snapshot/manifest/chunk lookups.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 from itertools import product
@@ -258,6 +259,63 @@ class IcechunkReadStore(Store):
 
         return read_chunk(self._root_path, cref, storage=self._storage)
 
+    def _resolve_chunk_ref(
+        self, key: str
+    ) -> ChunkRefInfo | None:
+        """Resolve a zarr key to a ChunkRefInfo without reading data.
+
+        Returns *None* for metadata keys, unknown keys, missing nodes,
+        or chunks that don't exist in the manifests.
+        """
+        node_path, kind = _parse_key(key)
+        if kind == "unknown" or kind == "metadata":
+            return None
+        node = self._nodes_by_path.get(node_path)
+        if node is None or node.node_type != "array":
+            return None
+        assert isinstance(kind, tuple)
+        return self._find_chunk_ref(node_path, node, kind)
+
+    async def _aget(
+        self,
+        key: str,
+        prototype: BufferPrototype,
+        byte_range: ByteRequest | None = None,
+    ) -> Buffer | None:
+        """Async get that uses ``aread_chunk`` for S3 concurrency."""
+        node_path, kind = _parse_key(key)
+
+        if kind == "unknown":
+            return None
+
+        node = self._nodes_by_path.get(node_path)
+        if node is None:
+            return None
+
+        if kind == "metadata":
+            raw = node.user_data if node.user_data else None
+            if raw is None:
+                return None
+            data = _apply_byte_range(raw, byte_range)
+            return prototype.buffer.from_bytes(data)
+
+        # Chunk coordinate tuple
+        assert isinstance(kind, tuple)
+        chunk_coords: tuple[int, ...] = kind
+
+        if node.node_type != "array":
+            return None
+
+        cref = self._find_chunk_ref(node_path, node, chunk_coords)
+        if cref is None:
+            return None
+
+        from icepyck.chunks import aread_chunk
+
+        data = await aread_chunk(self._root_path, cref, storage=self._storage)
+        data = _apply_byte_range(data, byte_range)
+        return prototype.buffer.from_bytes(data)
+
     # ------------------------------------------------------------------
     # zarr.abc.store.Store interface
     # ------------------------------------------------------------------
@@ -268,6 +326,9 @@ class IcechunkReadStore(Store):
         prototype: BufferPrototype,
         byte_range: ByteRequest | None = None,
     ) -> Buffer | None:
+        # s3fs async doesn't work here due to event loop conflicts
+        # (s3fs binds connections to its internal loop, zarr uses a different one).
+        # Sync reads are fine — the real win is asyncio.gather in get_partial_values.
         data = self._resolve_key(key)
         if data is None:
             return None
@@ -279,9 +340,15 @@ class IcechunkReadStore(Store):
         prototype: BufferPrototype,
         key_ranges: Iterable[tuple[str, ByteRequest | None]],
     ) -> list[Buffer | None]:
-        return [
-            await self.get(key, prototype, byte_range=br) for key, br in key_ranges
-        ]
+        key_ranges_list = list(key_ranges)
+        return list(
+            await asyncio.gather(
+                *(
+                    self.get(key, prototype, byte_range=br)
+                    for key, br in key_ranges_list
+                )
+            )
+        )
 
     async def exists(self, key: str) -> bool:
         return self._resolve_key(key) is not None
