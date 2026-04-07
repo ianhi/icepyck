@@ -14,24 +14,21 @@
 # prerelease = "allow"
 # ///
 """
-Benchmark icepyck vs icechunk on S3: count sequential fetches.
+Benchmark icepyck vs icechunk on S3 ERA5.
 
-Wall clock time on S3 is dominated by network latency, so the metric
-that matters is how many sequential round-trips each operation requires.
+Measures wall time and (for icepyck) counts sequential S3 GETs.
+On S3, wall time ≈ (sequential GETs) × latency per GET.
 """
 
+import sys
 import time
 import warnings
-from unittest.mock import patch
 
 import numpy as np
 import xarray as xr
 import zarr
 from rich.console import Console
 from rich.table import Table
-
-import icepyck
-from icepyck.storage import S3Storage
 
 warnings.filterwarnings("ignore")
 console = Console()
@@ -40,118 +37,106 @@ URL = "s3://icechunk-public-data/v1/era5_weatherbench2"
 GROUP = "1x721x1440"
 
 
-class CountingS3Storage(S3Storage):
-    """S3Storage wrapper that counts read() calls."""
+def bench_icepyck() -> list[tuple[str, int, float]]:
+    """Benchmark icepyck, returning (label, s3_gets, seconds)."""
+    import icepyck
+    from icepyck.storage import S3Storage
 
-    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
-        super().__init__(*args, **kwargs)
-        self.read_count = 0
+    class CountingStorage(S3Storage):
+        def __init__(self, *a, **kw):  # type: ignore[no-untyped-def]
+            super().__init__(*a, **kw)
+            self.n = 0
 
-    def read(self, path: str) -> bytes:
-        self.read_count += 1
-        return super().read(path)
+        def read(self, path: str) -> bytes:
+            self.n += 1
+            return super().read(path)
 
-    def reset(self) -> None:
-        self.read_count = 0
+        def reset(self) -> None:
+            self.n = 0
+
+    results = []
+    s = CountingStorage(URL, anon=True)
+
+    s.reset()
+    t0 = time.perf_counter()
+    repo = icepyck.Repository(storage=s)
+    session = repo.readonly_session(branch="main")
+    results.append(("Open + session", s.n, time.perf_counter() - t0))
+
+    s.reset()
+    t0 = time.perf_counter()
+    ds = xr.open_dataset(
+        session.store, group=GROUP, engine="zarr",
+        chunks=None, consolidated=False,
+    )
+    results.append(("xr.open_dataset", s.n, time.perf_counter() - t0))
+
+    root = zarr.open_group(store=session.store, mode="r", path=GROUP)
+    s.reset()
+    t0 = time.perf_counter()
+    _ = np.array(root["2m_temperature"][0, :, :])
+    results.append(("Read 1 chunk (4MB)", s.n, time.perf_counter() - t0))
+
+    return results
 
 
-# Set up counting storage
-storage = CountingS3Storage(URL, anon=True)
-repo = icepyck.Repository(storage=storage)
+def bench_icechunk() -> list[tuple[str, int, float]]:
+    """Benchmark icechunk, returning (label, s3_gets=-1, seconds)."""
+    import icechunk
 
-# ── Count fetches per operation ────────────────────────────
+    results = []
 
-table = Table(title="⛏️🧊 icepyck S3 round-trips (ERA5)")
+    t0 = time.perf_counter()
+    storage = icechunk.s3_storage(
+        bucket="icechunk-public-data",
+        prefix="v1/era5_weatherbench2",
+        region="us-east-1",
+        anonymous=True,
+    )
+    repo = icechunk.Repository.open(storage=storage)
+    session = repo.readonly_session("main")
+    results.append(("Open + session", -1, time.perf_counter() - t0))
+
+    t0 = time.perf_counter()
+    ds = xr.open_dataset(
+        session.store, group=GROUP, engine="zarr",
+        chunks=None, consolidated=False,
+    )
+    results.append(("xr.open_dataset", -1, time.perf_counter() - t0))
+
+    root = zarr.open_group(store=session.store, mode="r", path=GROUP)
+    t0 = time.perf_counter()
+    _ = np.array(root["2m_temperature"][0, :, :])
+    results.append(("Read 1 chunk (4MB)", -1, time.perf_counter() - t0))
+
+    return results
+
+
+# Run icepyck first, then icechunk (separate to avoid loop conflicts)
+console.print("[dim]Benchmarking icepyck...[/dim]")
+pyck = bench_icepyck()
+console.print("[dim]Benchmarking icechunk...[/dim]")
+ic = bench_icechunk()
+
+table = Table(title="⛏️🧊 S3 ERA5 benchmark (7TB dataset)")
 table.add_column("Operation", style="bold")
-table.add_column("S3 GETs", justify="right")
-table.add_column("Wall time", justify="right")
-table.add_column("Notes", style="dim")
+table.add_column("icepyck", justify="right")
+table.add_column("icechunk", justify="right")
+table.add_column("S3 GETs", justify="right", style="dim")
 
-# 1. Open repo (already done in constructor, but let's measure fresh)
-storage2 = CountingS3Storage(URL, anon=True)
-t0 = time.perf_counter()
-repo2 = icepyck.Repository(storage=storage2)
-t1 = time.perf_counter()
-table.add_row(
-    "Open repo",
-    str(storage2.read_count),
-    f"{(t1-t0)*1000:.0f} ms",
-    "reads $ROOT/repo",
-)
-
-# 2. Create session
-storage2.reset()
-t0 = time.perf_counter()
-session = repo2.readonly_session(branch="main")
-t1 = time.perf_counter()
-table.add_row(
-    "Create session",
-    str(storage2.read_count),
-    f"{(t1-t0)*1000:.0f} ms",
-    "reads snapshot file",
-)
-
-# 3. xr.open_dataset (metadata only, no chunk data)
-storage2.reset()
-t0 = time.perf_counter()
-ds = xr.open_dataset(
-    session.store, group=GROUP, engine="zarr",
-    chunks=None, consolidated=False,
-)
-t1 = time.perf_counter()
-table.add_row(
-    "xr.open_dataset (lazy)",
-    str(storage2.read_count),
-    f"{(t1-t0)*1000:.0f} ms",
-    "metadata only, no chunk fetches",
-)
-
-# 4. Read coordinate (small array, triggers manifest + chunk loads)
-storage2.reset()
-t0 = time.perf_counter()
-lat = ds["latitude"].values
-t1 = time.perf_counter()
-table.add_row(
-    "Read latitude (721 floats)",
-    str(storage2.read_count),
-    f"{(t1-t0)*1000:.0f} ms",
-    "manifest + chunk",
-)
-
-# 5. Read another coordinate (manifest may be cached)
-storage2.reset()
-t0 = time.perf_counter()
-lon = ds["longitude"].values
-t1 = time.perf_counter()
-table.add_row(
-    "Read longitude (1440 floats)",
-    str(storage2.read_count),
-    f"{(t1-t0)*1000:.0f} ms",
-    "chunk only if manifest cached",
-)
-
-# 6. Read 1 time slice of 2m_temperature
-root = zarr.open_group(store=session.store, mode="r", path=GROUP)
-storage2.reset()
-t0 = time.perf_counter()
-temp_slice = np.array(root["2m_temperature"][0, :, :])
-t1 = time.perf_counter()
-table.add_row(
-    "Read 1 time slice (4MB)",
-    str(storage2.read_count),
-    f"{(t1-t0)*1000:.0f} ms",
-    "1×721×1440 float32",
-)
+for (label, gets, t_pyck), (_, _, t_ic) in zip(pyck, ic, strict=True):
+    ratio = t_pyck / t_ic if t_ic > 0 else 0
+    color = "green" if ratio <= 1 else "yellow" if ratio <= 2 else "red"
+    table.add_row(
+        label,
+        f"{t_pyck*1000:.0f} ms",
+        f"{t_ic*1000:.0f} ms [{color}]({ratio:.1f}x)[/]",
+        str(gets) if gets >= 0 else "?",
+    )
 
 console.print()
 console.print(table)
-console.print()
 console.print(
-    "[dim]Each S3 GET adds ~50-150ms of latency. "
-    "Sequential GETs are the bottleneck.[/dim]"
-)
-console.print(
-    f"[dim]latitude shape: {lat.shape}, "
-    f"longitude shape: {lon.shape}, "
-    f"temp slice shape: {temp_slice.shape}[/dim]"
+    "\n[dim]ratio = icepyck/icechunk. "
+    "<1 = icepyck faster. >1 = icechunk faster.[/dim]"
 )
