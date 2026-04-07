@@ -20,8 +20,10 @@ dev = [
     "icechunk>=2.0.0a0",
     "mypy",
     "numpy>=2.4.4",
+    "pooch>=1.9.0",
     "pytest>=9.0.3",
     "ruff",
+    "scipy>=1.17.1",
     "xarray>=2026.2.0",
     "zarr>=3",
 ]
