@@ -84,3 +84,18 @@ class S3Storage:
             return []
         root_prefix = f"{self._root}/"
         return [f.removeprefix(root_prefix) for f in files]
+
+    def close(self) -> None:
+        """Close the underlying async s3fs HTTP session.
+
+        Prevents ResourceWarning about an unclosed aiohttp ClientSession
+        when the object is garbage-collected.
+        """
+        try:
+            s3creator = self._async_fs._s3creator
+        except AttributeError:
+            return  # session was never opened
+        self._async_fs.close_session(self._async_fs.loop, s3creator)
+
+    def __del__(self) -> None:
+        self.close()
