@@ -70,6 +70,19 @@ def _load_chunk_refs(
     return result
 
 
+async def _aload_chunk_refs(
+    node: NodeInfo,
+    storage: Storage,
+) -> dict[tuple[int, ...], ChunkRefInfo]:
+    """Async version of _load_chunk_refs — fetches manifests concurrently."""
+    result: dict[tuple[int, ...], ChunkRefInfo] = {}
+    for mref in node.manifest_refs:
+        manifest = await ManifestReader.afrom_storage(mref.manifest_id, storage)
+        for cref in manifest.get_chunk_refs(node.node_id):
+            result[cref.index] = cref
+    return result
+
+
 def _open_repo(
     repo_path: str | Path, anon: bool = False
 ) -> tuple[RepoInfo, Storage]:

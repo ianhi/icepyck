@@ -47,10 +47,6 @@ class SnapshotReader:
         *,
         storage: Storage | None = None,
     ) -> None:
-        from icepyck.generated.ArrayNodeData import ArrayNodeData
-        from icepyck.generated.NodeData import NodeData
-        from icepyck.generated.Snapshot import Snapshot
-
         self._snapshot_id = snapshot_id
         snapshot_name = crockford_encode(snapshot_id)
 
@@ -63,6 +59,37 @@ class SnapshotReader:
             header, payload = parse_file(Path(root_path) / "snapshots" / snapshot_name)
         else:
             raise TypeError("Either root_path or storage must be provided")
+        self._init_from_payload(snapshot_id, header, payload)
+
+    @classmethod
+    async def afrom_storage(
+        cls,
+        storage: Storage,
+        snapshot_id: bytes,
+    ) -> "SnapshotReader":
+        """Async constructor: fetch snapshot bytes via ``storage.aread()`` then parse."""
+        snapshot_name = crockford_encode(snapshot_id)
+        path = f"snapshots/{snapshot_name}"
+        if hasattr(storage, "aread"):
+            raw: bytes = await storage.aread(path)  # type: ignore[attr-defined]
+        else:
+            raw = storage.read(path)
+        header, payload = parse_bytes(raw)
+        instance = cls.__new__(cls)
+        instance._snapshot_id = snapshot_id
+        instance._init_from_payload(snapshot_id, header, payload)
+        return instance
+
+    def _init_from_payload(
+        self,
+        snapshot_id: bytes,
+        header: object,
+        payload: bytes,
+    ) -> None:
+        from icepyck.generated.ArrayNodeData import ArrayNodeData
+        from icepyck.generated.NodeData import NodeData
+        from icepyck.generated.Snapshot import Snapshot
+
         if header.file_type != FileType.SNAPSHOT:
             raise ValueError(
                 f"Expected SNAPSHOT file type ({FileType.SNAPSHOT}), "
