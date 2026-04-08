@@ -8,11 +8,8 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "click>=8.3.2",
     "flatbuffers",
-    "rich>=14.3.3",
     "s3fs",
-    "textual>=8.2.3",
     "zarr>=3",
     "zstandard",
 ]
@@ -30,9 +27,6 @@ dev = [
     "xarray>=2026.2.0",
     "zarr>=3",
 ]
-
-[project.scripts]
-icepyck = "icepyck.cli:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -67,13 +67,16 @@ class SnapshotReader:
         storage: Storage,
         snapshot_id: bytes,
     ) -> "SnapshotReader":
-        """Async constructor: fetch snapshot bytes via ``storage.aread()`` then parse."""
+        """Async constructor: fetch snapshot bytes in a thread, then parse.
+
+        Uses ``asyncio.to_thread`` so the event loop stays free during the
+        blocking S3 read, and the task remains cancellable at the await point.
+        """
+        import asyncio
+
         snapshot_name = crockford_encode(snapshot_id)
         path = f"snapshots/{snapshot_name}"
-        if hasattr(storage, "aread"):
-            raw: bytes = await storage.aread(path)  # type: ignore[attr-defined]
-        else:
-            raw = storage.read(path)
+        raw: bytes = await asyncio.to_thread(storage.read, path)
         header, payload = parse_bytes(raw)
         instance = cls.__new__(cls)
         instance._snapshot_id = snapshot_id
