@@ -174,12 +174,11 @@ class ManifestReader:
         synchronous ``storage.read()`` otherwise.  This avoids blocking the
         asyncio event loop during manifest fetches from S3.
         """
+        import asyncio
+
         manifest_name = crockford_encode(manifest_id)
         path = f"manifests/{manifest_name}"
-        if hasattr(storage, "aread"):
-            raw: bytes = await storage.aread(path)  # type: ignore[attr-defined]
-        else:
-            raw = storage.read(path)
+        raw: bytes = await asyncio.to_thread(storage.read, path)
         header, payload = parse_bytes(raw)
         instance = cls.__new__(cls)
         instance._manifest_id = manifest_id
