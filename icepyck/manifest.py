@@ -43,6 +43,39 @@ class ChunkRefInfo:
     location: str | None = None
 
 
+def count_chunk_types(raw: bytes, node_id: bytes) -> tuple[int, int, int]:
+    """Count (inline, native, virtual) chunk types for one node from raw manifest bytes.
+
+    Much cheaper than building ChunkRefInfo objects: uses the flatbuffer API
+    directly with no Python object allocation — just integer increments.
+    The raw bytes are typically already cached in the storage layer.
+    """
+    from icepyck.generated.Manifest import Manifest
+
+    _, payload = parse_bytes(raw)
+    buf = bytearray(payload)
+    manifest = Manifest.GetRootAs(buf, 0)
+
+    inline = native = virtual = 0
+    for i in range(manifest.ArraysLength()):
+        arr = manifest.Arrays(i)
+        nid_obj = arr.NodeId()
+        if not nid_obj or bytes(nid_obj.Bytes()) != node_id:
+            continue
+        for j in range(arr.RefsLength()):
+            cref = arr.Refs(j)
+            if cref is None:
+                continue
+            if cref.InlineLength() > 0:
+                inline += 1
+            elif cref.ChunkId() is not None:
+                native += 1
+            else:
+                virtual += 1
+        break  # each node appears at most once per manifest
+    return inline, native, virtual
+
+
 def _parse_manifest_payload(
     manifest_id: bytes, header: object, payload: bytes
 ) -> dict[bytes, list[ChunkRefInfo]]:
