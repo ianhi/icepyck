@@ -61,14 +61,14 @@ class TestDiffBetweenCommits:
             m for m in diff.modified_nodes if m.path == "/group1/temperatures"
         )
         assert temp_change.chunks_changed is True
-        assert len(temp_change.changed_chunk_indices) > 0
+        assert len(temp_change.changed_extents) > 0
 
-    def test_temperatures_chunk_index_is_0(self, diff: SnapshotDiff) -> None:
+    def test_temperatures_extent_covers_chunk_0(self, diff: SnapshotDiff) -> None:
         temp_change = next(
             m for m in diff.modified_nodes if m.path == "/group1/temperatures"
         )
-        # The first chunk (0,) should be the one that changed
-        assert (0,) in temp_change.changed_chunk_indices
+        # The changed extent range should cover flat chunk index 0
+        assert any(lo <= 0 for lo, _hi in temp_change.changed_extents)
 
     def test_unchanged_nodes_present(self, diff: SnapshotDiff) -> None:
         # Root, group1, and timestamps should be unchanged

@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from icepyck.manifest import ChunkRefInfo, ChunkType, ManifestReader
 from icepyck.repo import RepoInfo
 from icepyck.snapshot import NodeInfo, SnapshotReader
 from icepyck.storage import Storage
@@ -23,9 +22,9 @@ class NodeChange:
     node_type: str
     metadata_changed: bool
     chunks_changed: bool
-    old_chunk_count: int
-    new_chunk_count: int
-    changed_chunk_indices: list[tuple[int, ...]] = field(default_factory=list)
+    # Extent ranges (from, to) of chunk flat-indices that changed.
+    # Derived from manifest-ID comparison — no manifest downloads needed.
+    changed_extents: list[tuple[int, int]] = field(default_factory=list)
     new_user_data: bytes | None = None  # raw zarr.json from new snapshot
 
 
@@ -41,46 +40,27 @@ class SnapshotDiff:
     unchanged_count: int = 0
 
 
-def _chunk_ref_key(cref: ChunkRefInfo) -> tuple[object, ...]:
-    """Return a comparable key for a chunk reference.
+def _manifest_changed_extents(
+    old_node: NodeInfo,
+    new_node: NodeInfo,
+) -> list[tuple[int, int]]:
+    """Return the extent ranges of chunks that changed between two array nodes.
 
-    Two chunks are "same" if they have the same type and content identity:
-    - INLINE: same bytes
-    - NATIVE: same chunk_id + offset + length
-    - VIRTUAL: same location + offset + length
+    Compares manifest IDs (content-addressed) — no manifest downloads needed.
+    Any extent covered by a manifest that exists in one snapshot but not the
+    other is considered changed.
     """
-    if cref.chunk_type == ChunkType.INLINE:
-        return (ChunkType.INLINE, cref.inline_data)
-    elif cref.chunk_type == ChunkType.NATIVE:
-        return (ChunkType.NATIVE, cref.chunk_id, cref.offset, cref.length)
-    else:
-        return (ChunkType.VIRTUAL, cref.location, cref.offset, cref.length)
+    old_by_id = {mref.manifest_id: mref.extents for mref in old_node.manifest_refs}
+    new_by_id = {mref.manifest_id: mref.extents for mref in new_node.manifest_refs}
 
-
-def _load_chunk_refs(
-    node: NodeInfo,
-    storage: Storage,
-) -> dict[tuple[int, ...], ChunkRefInfo]:
-    """Load all chunk refs for an array node, keyed by chunk index."""
-    result: dict[tuple[int, ...], ChunkRefInfo] = {}
-    for mref in node.manifest_refs:
-        manifest = ManifestReader(storage=storage, manifest_id=mref.manifest_id)
-        for cref in manifest.get_chunk_refs(node.node_id):
-            result[cref.index] = cref
-    return result
-
-
-async def _aload_chunk_refs(
-    node: NodeInfo,
-    storage: Storage,
-) -> dict[tuple[int, ...], ChunkRefInfo]:
-    """Async version of _load_chunk_refs — fetches manifests concurrently."""
-    result: dict[tuple[int, ...], ChunkRefInfo] = {}
-    for mref in node.manifest_refs:
-        manifest = await ManifestReader.afrom_storage(mref.manifest_id, storage)
-        for cref in manifest.get_chunk_refs(node.node_id):
-            result[cref.index] = cref
-    return result
+    changed: list[tuple[int, int]] = []
+    for mid, extents in new_by_id.items():
+        if mid not in old_by_id:
+            changed.extend(extents)
+    for mid, extents in old_by_id.items():
+        if mid not in new_by_id:
+            changed.extend(extents)
+    return changed
 
 
 def _open_repo(
@@ -208,29 +188,12 @@ def diff_snapshots(
 
         metadata_changed = old_node.user_data != new_node.user_data
         chunks_changed = False
-        changed_indices: list[tuple[int, ...]] = []
-        old_chunk_count = 0
-        new_chunk_count = 0
+        changed_extents: list[tuple[int, int]] = []
 
         if old_node.node_type == "array" and new_node.node_type == "array":
-            # Fast path: if manifest refs are identical, chunks cannot have changed.
-            # This avoids loading any manifests for unmodified arrays.
             if old_node.manifest_refs != new_node.manifest_refs:
-                old_chunks = _load_chunk_refs(old_node, storage=storage)
-                new_chunks = _load_chunk_refs(new_node, storage=storage)
-                old_chunk_count = len(old_chunks)
-                new_chunk_count = len(new_chunks)
-
-                all_indices = sorted(set(old_chunks.keys()) | set(new_chunks.keys()))
-                for idx in all_indices:
-                    old_cref = old_chunks.get(idx)
-                    new_cref = new_chunks.get(idx)
-                    if old_cref is None or new_cref is None:
-                        changed_indices.append(idx)
-                    elif _chunk_ref_key(old_cref) != _chunk_ref_key(new_cref):
-                        changed_indices.append(idx)
-
-                chunks_changed = len(changed_indices) > 0
+                changed_extents = _manifest_changed_extents(old_node, new_node)
+                chunks_changed = bool(changed_extents)
 
         if metadata_changed or chunks_changed:
             diff.modified_nodes.append(
@@ -239,9 +202,7 @@ def diff_snapshots(
                     node_type=old_node.node_type,
                     metadata_changed=metadata_changed,
                     chunks_changed=chunks_changed,
-                    old_chunk_count=old_chunk_count,
-                    new_chunk_count=new_chunk_count,
-                    changed_chunk_indices=changed_indices,
+                    changed_extents=changed_extents,
                     new_user_data=new_node.user_data,
                 )
             )
