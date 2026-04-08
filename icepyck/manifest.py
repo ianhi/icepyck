@@ -46,9 +46,11 @@ class ChunkRefInfo:
 def count_chunk_types(raw: bytes, node_id: bytes) -> tuple[int, int, int]:
     """Count (inline, native, virtual) chunk types for one node from raw manifest bytes.
 
-    Much cheaper than building ChunkRefInfo objects: uses the flatbuffer API
-    directly with no Python object allocation — just integer increments.
-    The raw bytes are typically already cached in the storage layer.
+    Uses the flatbuffer API directly — no ChunkRefInfo object allocation.
+    Chunk type is inferred by sampling the first ref; in practice all refs in a
+    manifest for a given node have the same type (native for scientific data,
+    inline for tiny arrays, etc.), so this is O(1) rather than O(n).
+    Falls back to a full scan only if the first few refs are mixed.
     """
     from icepyck.generated.Manifest import Manifest
 
@@ -56,24 +58,63 @@ def count_chunk_types(raw: bytes, node_id: bytes) -> tuple[int, int, int]:
     buf = bytearray(payload)
     manifest = Manifest.GetRootAs(buf, 0)
 
-    inline = native = virtual = 0
     for i in range(manifest.ArraysLength()):
         arr = manifest.Arrays(i)
         nid_obj = arr.NodeId()
         if not nid_obj or bytes(nid_obj.Bytes()) != node_id:
             continue
-        for j in range(arr.RefsLength()):
+
+        total = arr.RefsLength()
+        if total == 0:
+            return 0, 0, 0
+
+        # Sample first ref to infer dominant type — O(1)
+        cref0 = arr.Refs(0)
+        if cref0 is None:
+            return 0, 0, 0
+        if cref0.InlineLength() > 0:
+            first_type = "inline"
+        elif cref0.ChunkId() is not None:
+            first_type = "native"
+        else:
+            first_type = "virtual"
+
+        # Verify with a couple more samples before assuming uniform
+        sample = min(total, 4)
+        for j in range(1, sample):
             cref = arr.Refs(j)
             if cref is None:
                 continue
             if cref.InlineLength() > 0:
-                inline += 1
+                t = "inline"
             elif cref.ChunkId() is not None:
-                native += 1
+                t = "native"
             else:
-                virtual += 1
-        break  # each node appears at most once per manifest
-    return inline, native, virtual
+                t = "virtual"
+            if t != first_type:
+                # Mixed — do a full count
+                inline = native = virtual = 0
+                for k in range(total):
+                    c = arr.Refs(k)
+                    if c is None:
+                        continue
+                    if c.InlineLength() > 0:
+                        inline += 1
+                    elif c.ChunkId() is not None:
+                        native += 1
+                    else:
+                        virtual += 1
+                return inline, native, virtual
+
+        # Uniform type — return total without iterating
+        if first_type == "inline":
+            return total, 0, 0
+        elif first_type == "native":
+            return 0, total, 0
+        else:
+            return 0, 0, total
+
+    return 0, 0, 0
 
 
 def _parse_manifest_payload(
