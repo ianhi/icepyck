@@ -31,6 +31,15 @@ class Storage(Protocol):
         ...
 
 
+@runtime_checkable
+class AsyncStorage(Storage, Protocol):
+    """Storage that also supports async reads (e.g. S3)."""
+
+    async def aread(self, path: str) -> bytes:
+        """Read the entire contents of a file asynchronously."""
+        ...
+
+
 class LocalStorage:
     """Storage backed by a local filesystem directory."""
 

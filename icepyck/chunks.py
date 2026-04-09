@@ -80,7 +80,9 @@ async def aread_chunk(
         if chunk_ref.chunk_id is None:
             raise ValueError("Native chunk ref has no chunk_id")
         chunk_name = crockford_encode(chunk_ref.chunk_id)
-        if storage is not None and hasattr(storage, "aread"):
+        from icepyck.storage import AsyncStorage
+
+        if isinstance(storage, AsyncStorage):
             raw = await storage.aread(f"chunks/{chunk_name}")
         elif storage is not None:
             raw = storage.read(f"chunks/{chunk_name}")

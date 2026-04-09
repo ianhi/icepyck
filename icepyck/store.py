@@ -19,6 +19,8 @@ from zarr.abc.store import (
     Store,
 )
 
+from icepyck.storage import AsyncStorage
+
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable
     from pathlib import Path
@@ -203,7 +205,7 @@ class IcechunkReadStore(Store):
 
         from icepyck.manifest import ManifestReader as MR
 
-        if self._storage is not None and hasattr(self._storage, "aread"):
+        if self._storage is not None and isinstance(self._storage, AsyncStorage):
             manifest = await MR.afrom_storage(manifest_id, self._storage)
         else:
             manifest = MR(self._root_path, manifest_id, storage=self._storage)
@@ -377,7 +379,7 @@ class IcechunkReadStore(Store):
         prototype: BufferPrototype,
         byte_range: ByteRequest | None = None,
     ) -> Buffer | None:
-        if self._storage is not None and hasattr(self._storage, "aread"):
+        if self._storage is not None and isinstance(self._storage, AsyncStorage):
             return await self._aget(key, prototype, byte_range)
         data = self._resolve_key(key)
         if data is None:
