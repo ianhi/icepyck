@@ -559,6 +559,7 @@ class IcechunkStore(Store):
         super().__init__(read_only=False)
         self._session = session
         self._is_open = True
+        self._read_store: IcechunkReadStore | None = None
 
         # Pending writes: key -> bytes (zarr.json metadata or chunk data)
         self._pending: dict[str, bytes] = {}
@@ -676,7 +677,7 @@ class IcechunkStore(Store):
 
     def _get_read_store(self) -> IcechunkReadStore:
         """Lazily build a read store from the session's base snapshot."""
-        if not hasattr(self, "_read_store"):
+        if self._read_store is None:
             from icepyck.snapshot import SnapshotReader
 
             snap = SnapshotReader(

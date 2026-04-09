@@ -77,6 +77,7 @@ class WritableSession:
         self._branch = branch
         self._base_snapshot_id = base_snapshot_id
         self._repo = repo
+        self._store: object | None = None
 
         # Snapshot of existing nodes, keyed by path
         self._base_nodes: dict[str, NodeInfo] = {n.path: n for n in base_nodes}
@@ -119,7 +120,7 @@ class WritableSession:
     @property
     def store(self) -> object:
         """Return a zarr v3 read-write Store for this session."""
-        if not hasattr(self, "_store") or self._store is None:
+        if self._store is None:
             from icepyck.store import IcechunkStore
 
             self._store = IcechunkStore(self)
