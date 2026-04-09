@@ -26,6 +26,7 @@ class RepoState:
     branches: dict[str, int] = field(default_factory=dict)
     tags: dict[str, int] = field(default_factory=dict)
     deleted_tags: list[str] = field(default_factory=list)
+    version: str = ""  # opaque version token from storage (for conditional writes)
     _snap_index: dict[bytes, int] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
@@ -40,7 +41,7 @@ class RepoState:
         """
         from icepyck.generated.Repo import Repo
 
-        raw = storage.read("repo")
+        raw, version = storage.read_versioned("repo")
         header, payload = parse_bytes(raw)
         if header.file_type != FileType.REPO_INFO:
             raise ValueError(f"Expected REPO_INFO, got {header.file_type}")
@@ -95,6 +96,7 @@ class RepoState:
             branches=branches,
             tags=tags,
             deleted_tags=deleted_tags,
+            version=version,
         )
 
     @staticmethod

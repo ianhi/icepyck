@@ -26,8 +26,16 @@ class CountingStorage:
         self.read_paths.append(path)
         return self._inner.read(path)
 
+    def read_versioned(self, path: str) -> tuple[bytes, str]:
+        self.read_count += 1
+        self.read_paths.append(path)
+        return self._inner.read_versioned(path)
+
     def write(self, path: str, data: bytes) -> None:
         self._inner.write(path, data)
+
+    def conditional_write(self, path: str, data: bytes, expected_version: str) -> str:
+        return self._inner.conditional_write(path, data, expected_version)
 
     def exists(self, path: str) -> bool:
         return self._inner.exists(path)

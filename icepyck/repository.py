@@ -505,7 +505,12 @@ class Repository:
         )
 
     def _flush_repo(self, updates: list[UpdateData] | None = None) -> None:
-        """Serialize self._state to the repo file on storage."""
+        """Serialize self._state to the repo file via conditional write.
+
+        Uses the version token from when we last read the repo file.
+        Raises ConflictError if another writer modified it in between.
+        """
+        from icepyck.storage import VersionMismatchError
         from icepyck.writers import build_repo
 
         repo_bytes = build_repo(
@@ -516,7 +521,13 @@ class Repository:
             deleted_tags=self._state.deleted_tags,
             updates=updates,
         )
-        self._storage.write("repo", repo_bytes)
+        try:
+            new_version = self._storage.conditional_write(
+                "repo", repo_bytes, self._state.version
+            )
+            self._state.version = new_version
+        except VersionMismatchError as e:
+            raise ConflictError(f"Repo file was modified by another writer: {e}") from e
 
     # ------------------------------------------------------------------
     # Internal: ref resolution and caching

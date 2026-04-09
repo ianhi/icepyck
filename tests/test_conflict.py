@@ -87,18 +87,11 @@ class TestConflictDetection:
         ws_dev.set_chunk("/dev_arr", (0,), np.ones(4, dtype="<f4").tobytes())
         ws_dev.commit("On dev")  # Should succeed — different branch
 
-    @pytest.mark.xfail(
-        reason="Cross-process conflict detection requires storage-level "
-        "conditional writes (Phase 12). Currently, two independent "
-        "Repository instances don't share state, so the second writer "
-        "silently overwrites. This test documents the desired behavior.",
-        strict=True,
-    )
     def test_cross_process_conflict_detected_automatically(
         self, tmp_path: Path
     ) -> None:
-        """Two independent repos racing — conflict SHOULD be caught at
-        storage level without manual refresh. Requires conditional writes."""
+        """Two independent repos racing — conflict caught by storage-level
+        conditional write (version mismatch on the repo file)."""
         repo_path = tmp_path / "repo"
         icepyck.Repository.init(repo_path)
 
