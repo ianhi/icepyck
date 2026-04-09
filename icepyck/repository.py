@@ -104,7 +104,7 @@ class Session:
         """Return a zarr v3 read-only Store for this session."""
         if self._store is None:
             self._store = IcechunkReadStore(
-                root_path=self._repo._root,
+                root_path=None,
                 snapshot=self._snapshot,
                 storage=self._repo._storage,
             )
@@ -212,15 +212,12 @@ class Repository:
         storage: Storage | None = None,
     ) -> None:
         if storage is not None:
-            self._storage: Storage | None = storage
-            self._root: Path | None = None
-            self._state = RepoState.from_repo_info(RepoInfo(storage=storage))
+            self._storage: Storage = storage
         elif path is not None:
-            self._root = Path(path)
-            self._storage = None
-            self._state = RepoState.from_repo_info(RepoInfo(self._root / "repo"))
+            self._storage = LocalStorage(str(path))
         else:
             raise TypeError("Either path or storage must be provided")
+        self._state = RepoState.from_repo_info(RepoInfo(storage=self._storage))
         self._snapshot_cache: dict[bytes, SnapshotReader] = {}
         self._manifest_cache: dict[bytes, ManifestReader] = {}
 
@@ -275,8 +272,6 @@ class Repository:
         self.refresh()
         snapshot_id = self._resolve_ref(branch)
         snap = self._get_snapshot_by_id(snapshot_id)
-        if self._storage is None:
-            raise TypeError("Writable sessions require a storage backend")
         return WritableSession(
             storage=self._storage,
             branch=branch,
@@ -411,7 +406,7 @@ class Repository:
     ) -> bytes:
         """Read a single chunk from an array."""
         chunk_ref = self._find_chunk_ref(ref, array_path, chunk_index)
-        return read_chunk(self._root, chunk_ref, storage=self._storage)
+        return read_chunk(None, chunk_ref, storage=self._storage)
 
     def read_all_chunks(
         self, ref: str, array_path: str
@@ -426,7 +421,7 @@ class Repository:
         for mref in manifest_refs:
             manifest = self._get_manifest(mref.manifest_id)
             for cref in manifest.get_chunk_refs(node_id):
-                result[cref.index] = read_chunk(self._root, cref, storage=self._storage)
+                result[cref.index] = read_chunk(None, cref, storage=self._storage)
         return result
 
     def get_array_metadata(self, ref: str, array_path: str) -> dict:  # type: ignore[type-arg]
@@ -487,8 +482,6 @@ class Repository:
         """Serialize self._state to the repo file on storage."""
         from icepyck.writers import build_repo
 
-        if self._storage is None:
-            raise TypeError("Writing requires a storage backend")
         repo_bytes = build_repo(
             spec_version=2,
             branches=self._state.branches,
@@ -553,14 +546,14 @@ class Repository:
     def _get_snapshot_by_id(self, snapshot_id: bytes) -> SnapshotReader:
         if snapshot_id not in self._snapshot_cache:
             self._snapshot_cache[snapshot_id] = SnapshotReader(
-                self._root, snapshot_id, storage=self._storage
+                None, snapshot_id, storage=self._storage
             )
         return self._snapshot_cache[snapshot_id]
 
     def _get_manifest(self, manifest_id: bytes) -> ManifestReader:
         if manifest_id not in self._manifest_cache:
             self._manifest_cache[manifest_id] = ManifestReader(
-                self._root, manifest_id, storage=self._storage
+                None, manifest_id, storage=self._storage
             )
         return self._manifest_cache[manifest_id]
 
