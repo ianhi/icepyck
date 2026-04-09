@@ -13,11 +13,12 @@ from pathlib import Path
 from icepyck.chunks import read_chunk
 from icepyck.manifest import ChunkRefInfo, ManifestReader
 from icepyck.repo import RepoInfo
+from icepyck.repo_state import RepoState
 from icepyck.session import WritableSession
 from icepyck.snapshot import NodeInfo, SnapshotReader
 from icepyck.storage import LocalStorage, S3Storage, Storage
 from icepyck.store import IcechunkReadStore
-from icepyck.writers import UpdateData
+from icepyck.writers import SnapshotInfoData, UpdateData
 
 _INITIAL_SNAPSHOT_ID = bytes.fromhex("0b1cc8d6787580f0e33a6534")
 """Well-known ID for the initial empty snapshot (1CECHNKREP0F1RSTCMT0)."""
@@ -59,9 +60,6 @@ def open(
 
 class Session:
     """A read-only session bound to a specific snapshot.
-
-    Provides a zarr-compatible :pyclass:`~icepyck.store.IcechunkReadStore`
-    and convenience methods for inspecting the snapshot contents.
 
     Parameters
     ----------
@@ -154,7 +152,6 @@ class Repository:
         """
         from icepyck.writers import (
             NodeWriteData,
-            SnapshotInfoData,
             build_repo,
             build_snapshot,
         )
@@ -220,19 +217,19 @@ class Repository:
         if storage is not None:
             self._storage: Storage | None = storage
             self._root: Path | None = None
-            self._repo = RepoInfo(storage=storage)
+            self._state = RepoState.from_repo_info(RepoInfo(storage=storage))
         elif path is not None:
             self._root = Path(path)
             self._storage = None
-            self._repo = RepoInfo(self._root / "repo")
+            self._state = RepoState.from_repo_info(RepoInfo(self._root / "repo"))
         else:
             raise TypeError("Either path or storage must be provided")
         self._snapshot_cache: dict[bytes, SnapshotReader] = {}
         self._manifest_cache: dict[bytes, ManifestReader] = {}
 
     def __repr__(self) -> str:
-        branches = self._repo.list_branches()
-        tags = self._repo.list_tags()
+        branches = list(self._state.branches.keys())
+        tags = list(self._state.tags.keys())
         parts = [f"branches={branches!r}"]
         if tags:
             parts.append(f"tags={tags!r}")
@@ -277,10 +274,8 @@ class Repository:
         Changes are buffered in memory until
         :meth:`WritableSession.commit` is called.
         """
-        # Re-read repo state to pick up any commits since we last read
-        if self._storage is not None:
-            self._repo = RepoInfo(storage=self._storage)
-            self._snapshot_cache.clear()
+        # Re-read to pick up external changes (e.g. another process committed)
+        self.refresh()
         snapshot_id = self._resolve_ref(branch)
         snap = self._get_snapshot_by_id(snapshot_id)
         if self._storage is None:
@@ -290,9 +285,7 @@ class Repository:
             branch=branch,
             base_snapshot_id=snapshot_id,
             base_nodes=snap.list_nodes(),
-            repo_snapshots=self._repo.get_snapshots_data(),
-            repo_branches=self._repo.get_branches_data(),
-            repo_tags=self._repo.get_tags_data(),
+            repo=self,
         )
 
     def log(self, branch: str = "main") -> list[dict[str, object]]:
@@ -304,143 +297,108 @@ class Repository:
 
         from icepyck.crockford import encode as crockford_encode
 
-        snapshots = self._repo.get_snapshots_data()
-        branches = self._repo.get_branches_data()
-
-        if branch not in branches:
+        if branch not in self._state.branches:
             raise KeyError(f"Branch not found: {branch!r}")
 
-        idx = branches[branch]
+        idx = self._state.branches[branch]
         result = []
         visited: set[int] = set()
         while idx >= 0 and idx not in visited:
             visited.add(idx)
-            sid, parent_offset, flushed_at, message = snapshots[idx]
-            ts = datetime.fromtimestamp(flushed_at / 1_000_000, tz=UTC)
+            snap = self._state.snapshots[idx]
+            ts = datetime.fromtimestamp(snap.flushed_at / 1_000_000, tz=UTC)
+            parent_id = (
+                crockford_encode(self._state.snapshots[snap.parent_offset].snapshot_id)
+                if snap.parent_offset >= 0
+                else None
+            )
             result.append(
                 {
-                    "id": crockford_encode(sid),
-                    "parent": crockford_encode(snapshots[parent_offset][0])
-                    if parent_offset >= 0
-                    else None,
-                    "message": message,
+                    "id": crockford_encode(snap.snapshot_id),
+                    "parent": parent_id,
+                    "message": snap.message,
                     "time": ts.strftime("%Y-%m-%d %H:%M:%S UTC"),
                 }
             )
-            idx = parent_offset
+            idx = snap.parent_offset
         return result
 
     # ------------------------------------------------------------------
     # Branch & tag management
     # ------------------------------------------------------------------
 
-    def _refresh(self) -> None:
-        """Re-read repo file from storage to pick up external changes."""
-        if self._storage is not None:
-            self._repo = RepoInfo(storage=self._storage)
-            self._snapshot_cache.clear()
-
     def create_branch(self, name: str, snapshot: str) -> None:
         """Create a new branch pointing to the given snapshot."""
-        self._refresh()
         if "/" in name:
             raise ValueError("Branch names must not contain '/'")
-        branches = self._repo.get_branches_data()
-        if name in branches:
+        if name in self._state.branches:
             raise KeyError(f"Branch already exists: {name!r}")
         snapshot_id = self._resolve_ref(snapshot)
-        snapshots = self._repo.get_snapshots_data()
-        snap_idx = next(
-            (i for i, (sid, *_) in enumerate(snapshots) if sid == snapshot_id),
-            None,
-        )
-        if snap_idx is None:
+        snap_idx = self._state.find_snapshot_index(snapshot_id)
+        if snap_idx < 0:
             raise KeyError(f"Snapshot not found: {snapshot!r}")
-        branches[name] = snap_idx
-        self._write_repo(
-            branches=branches,
-            updates=[UpdateData(kind="branch_created", name=name)],
-        )
+        self._state.branches[name] = snap_idx
+        self._flush_repo([UpdateData(kind="branch_created", name=name)])
 
     def delete_branch(self, name: str) -> None:
         """Delete a branch. Cannot delete ``"main"``."""
-        self._refresh()
         if name == "main":
             raise ValueError("Cannot delete the 'main' branch")
-        branches = self._repo.get_branches_data()
-        if name not in branches:
+        if name not in self._state.branches:
             raise KeyError(f"Branch not found: {name!r}")
-        snap_idx = branches.pop(name)
-        snapshots = self._repo.get_snapshots_data()
-        prev_snap_id = snapshots[snap_idx][0]
-        self._write_repo(
-            branches=branches,
-            updates=[
+        snap_idx = self._state.branches.pop(name)
+        prev_snap_id = self._state.snapshots[snap_idx].snapshot_id
+        self._flush_repo(
+            [
                 UpdateData(
                     kind="branch_deleted",
                     name=name,
                     previous_snap_id=prev_snap_id,
                 )
-            ],
+            ]
         )
 
     def create_tag(self, name: str, snapshot: str) -> None:
         """Create an immutable tag pointing to the given snapshot."""
-        self._refresh()
         if "/" in name:
             raise ValueError("Tag names must not contain '/'")
-        tags = self._repo.get_tags_data()
-        if name in tags:
+        if name in self._state.tags:
             raise KeyError(f"Tag already exists: {name!r}")
-        deleted = self._repo.get_deleted_tags()
-        if name in deleted:
+        if name in self._state.deleted_tags:
             raise KeyError(
                 f"Tag {name!r} was previously deleted and cannot be recreated"
             )
         snapshot_id = self._resolve_ref(snapshot)
-        snapshots = self._repo.get_snapshots_data()
-        snap_idx = next(
-            (i for i, (sid, *_) in enumerate(snapshots) if sid == snapshot_id),
-            None,
-        )
-        if snap_idx is None:
+        snap_idx = self._state.find_snapshot_index(snapshot_id)
+        if snap_idx < 0:
             raise KeyError(f"Snapshot not found: {snapshot!r}")
-        tags[name] = snap_idx
-        self._write_repo(
-            tags=tags,
-            updates=[UpdateData(kind="tag_created", name=name)],
-        )
+        self._state.tags[name] = snap_idx
+        self._flush_repo([UpdateData(kind="tag_created", name=name)])
 
     def delete_tag(self, name: str) -> None:
         """Delete a tag (tombstoned — name cannot be reused)."""
-        self._refresh()
-        tags = self._repo.get_tags_data()
-        if name not in tags:
+        if name not in self._state.tags:
             raise KeyError(f"Tag not found: {name!r}")
-        snap_idx = tags.pop(name)
-        snapshots = self._repo.get_snapshots_data()
-        prev_snap_id = snapshots[snap_idx][0]
-        deleted = self._repo.get_deleted_tags()
-        deleted.append(name)
-        self._write_repo(
-            tags=tags,
-            deleted_tags=deleted,
-            updates=[
+        snap_idx = self._state.tags.pop(name)
+        prev_snap_id = self._state.snapshots[snap_idx].snapshot_id
+        self._state.deleted_tags.append(name)
+        self._flush_repo(
+            [
                 UpdateData(
                     kind="tag_deleted",
                     name=name,
                     previous_snap_id=prev_snap_id,
                 )
-            ],
+            ]
         )
 
     def list_branches(self) -> list[str]:
         """Return the names of all branches."""
-        return self._repo.list_branches()
+        return sorted(self._state.branches.keys())
 
     def list_tags(self) -> list[str]:
         """Return the names of all tags."""
-        return self._repo.list_tags()
+        return sorted(self._state.tags.keys())
 
     # ------------------------------------------------------------------
     # Legacy API (backward-compatible)
@@ -483,7 +441,69 @@ class Repository:
         return json.loads(node_info.user_data)  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Internal: repo file management
+    # ------------------------------------------------------------------
+
+    def refresh(self) -> None:
+        """Re-read repo state from storage.
+
+        Call this to pick up changes made by external processes.
+        Automatically called by :meth:`writable_session`.
+        """
+        if self._storage is not None:
+            self._state = RepoState.from_repo_info(RepoInfo(storage=self._storage))
+            self._snapshot_cache.clear()
+
+    def _apply_commit(
+        self,
+        branch: str,
+        snapshot_id: bytes,
+        parent_snapshot_id: bytes,
+        flushed_at: int,
+        message: str,
+    ) -> None:
+        """Apply a commit: update in-memory state and flush repo file.
+
+        Called by WritableSession.commit(). Not part of the public API.
+        """
+        parent_idx = self._state.find_snapshot_index(parent_snapshot_id)
+        new_snap = SnapshotInfoData(
+            snapshot_id=snapshot_id,
+            parent_offset=parent_idx,
+            flushed_at=flushed_at,
+            message=message,
+        )
+        self._state.snapshots.append(new_snap)
+        self._state.branches[branch] = len(self._state.snapshots) - 1
+        self._flush_repo(
+            [
+                UpdateData(
+                    kind="new_commit",
+                    branch=branch,
+                    snapshot_id=snapshot_id,
+                    updated_at=flushed_at,
+                )
+            ]
+        )
+
+    def _flush_repo(self, updates: list[UpdateData] | None = None) -> None:
+        """Serialize self._state to the repo file on storage."""
+        from icepyck.writers import build_repo
+
+        if self._storage is None:
+            raise TypeError("Writing requires a storage backend")
+        repo_bytes = build_repo(
+            spec_version=2,
+            branches=self._state.branches,
+            tags=self._state.tags,
+            snapshots=self._state.snapshots,
+            deleted_tags=self._state.deleted_tags,
+            updates=updates,
+        )
+        self._storage.write("repo", repo_bytes)
+
+    # ------------------------------------------------------------------
+    # Internal: ref resolution and caching
     # ------------------------------------------------------------------
 
     def _resolve_ref(self, ref: str) -> bytes:
@@ -492,11 +512,11 @@ class Repository:
         from icepyck.crockford import encode as crockford_encode
 
         try:
-            return self._repo.get_snapshot_id(ref)
+            return self._state.get_snapshot_id_by_branch(ref)
         except KeyError:
             pass
         try:
-            return self._repo.get_tag_snapshot_id(ref)
+            return self._state.get_snapshot_id_by_tag(ref)
         except KeyError:
             pass
         try:
@@ -509,11 +529,10 @@ class Repository:
         if ref_upper and all(
             c in "0123456789ABCDEFGHJKMNPQRSTVWXYZ" for c in ref_upper
         ):
-            all_ids = self._repo.get_snapshots_data()
             matches = [
-                sid
-                for sid, _, _, _ in all_ids
-                if crockford_encode(sid).startswith(ref_upper)
+                s.snapshot_id
+                for s in self._state.snapshots
+                if crockford_encode(s.snapshot_id).startswith(ref_upper)
             ]
             if len(matches) == 1:
                 return matches[0]
@@ -529,52 +548,6 @@ class Repository:
         except ValueError:
             pass
         raise KeyError(f"Could not resolve ref: {ref!r}")
-
-    def _write_repo(
-        self,
-        branches: dict[str, int] | None = None,
-        tags: dict[str, int] | None = None,
-        deleted_tags: list[str] | None = None,
-        updates: list[UpdateData] | None = None,
-    ) -> None:
-        """Rebuild and write the repo file with updated state."""
-        from icepyck.writers import SnapshotInfoData, build_repo
-
-        if self._storage is None:
-            raise TypeError("Writing requires a storage backend")
-
-        # Re-read current repo state (may have been updated by a WritableSession)
-        self._repo = RepoInfo(storage=self._storage)
-        self._snapshot_cache.clear()
-
-        repo_branches = (
-            branches if branches is not None else self._repo.get_branches_data()
-        )
-        repo_tags = tags if tags is not None else self._repo.get_tags_data()
-        repo_deleted_tags = (
-            deleted_tags if deleted_tags is not None else self._repo.get_deleted_tags()
-        )
-        snapshots = self._repo.get_snapshots_data()
-
-        repo_bytes = build_repo(
-            spec_version=2,
-            branches=repo_branches,
-            tags=repo_tags,
-            snapshots=[
-                SnapshotInfoData(
-                    snapshot_id=sid,
-                    parent_offset=poff,
-                    flushed_at=fat,
-                    message=msg,
-                )
-                for sid, poff, fat, msg in snapshots
-            ],
-            deleted_tags=repo_deleted_tags,
-            updates=updates,
-        )
-        self._storage.write("repo", repo_bytes)
-        self._repo = RepoInfo(storage=self._storage)
-        self._snapshot_cache.clear()
 
     def _get_snapshot(self, ref: str) -> SnapshotReader:
         snapshot_id = self._resolve_ref(ref)

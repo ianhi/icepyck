@@ -21,21 +21,23 @@ from icepyck.writers import (
     ManifestFileData,
     ManifestRefData,
     NodeWriteData,
-    SnapshotInfoData,
-    UpdateData,
     build_manifest,
-    build_repo,
     build_snapshot,
     build_transaction_log,
 )
 
 if TYPE_CHECKING:
+    from icepyck.repository import Repository
     from icepyck.snapshot import NodeInfo
     from icepyck.storage import Storage
 
 
 class WritableSession:
     """A writable session that tracks changes and commits them atomically.
+
+    Writes immutable files (chunks, manifests, snapshots, transaction logs)
+    directly to storage. Delegates repo file updates to the owning
+    Repository via ``repo._apply_commit()``.
 
     Parameters
     ----------
@@ -47,12 +49,8 @@ class WritableSession:
         The 12-byte ObjectId12 of the snapshot this session is based on.
     base_nodes : list[NodeInfo]
         The node list from the base snapshot.
-    repo_snapshots : list[tuple[bytes, int, int, str]]
-        Existing (id, parent_offset, flushed_at, message) from the repo file.
-    repo_branches : dict[str, int]
-        Existing branch name -> snapshot index mapping.
-    repo_tags : dict[str, int]
-        Existing tag name -> snapshot index mapping.
+    repo : Repository
+        Back-reference to the owning Repository (for repo file updates).
     """
 
     def __init__(
@@ -61,21 +59,15 @@ class WritableSession:
         branch: str,
         base_snapshot_id: bytes,
         base_nodes: list[NodeInfo],
-        repo_snapshots: list[tuple[bytes, int, int, str]],
-        repo_branches: dict[str, int],
-        repo_tags: dict[str, int],
+        repo: Repository,
     ) -> None:
         self._storage = storage
         self._branch = branch
         self._base_snapshot_id = base_snapshot_id
+        self._repo = repo
 
         # Snapshot of existing nodes, keyed by path
         self._base_nodes: dict[str, NodeInfo] = {n.path: n for n in base_nodes}
-
-        # Repo-level state carried forward
-        self._repo_snapshots = list(repo_snapshots)
-        self._repo_branches = dict(repo_branches)
-        self._repo_tags = dict(repo_tags)
 
         # ----- Change tracking -----
         # New/replaced nodes (path -> NodeWriteData built at commit time)
@@ -277,39 +269,17 @@ class WritableSession:
         )
         self._storage.write(f"transactions/{crockford_encode(snapshot_id)}", txn_bytes)
 
-        # --- Step 5: Update repo file ---
-        parent_idx = self._find_snapshot_index(self._base_snapshot_id)
-        new_snap_idx = len(self._repo_snapshots)
-        self._repo_snapshots.append((snapshot_id, parent_idx, flushed_at, message))
-        self._repo_branches[self._branch] = new_snap_idx
-
-        repo_bytes = build_repo(
-            spec_version=2,
-            branches=self._repo_branches,
-            tags=self._repo_tags,
-            snapshots=[
-                SnapshotInfoData(
-                    snapshot_id=sid,
-                    parent_offset=poff,
-                    flushed_at=fat,
-                    message=msg,
-                )
-                for sid, poff, fat, msg in self._repo_snapshots
-            ],
-            updates=[
-                UpdateData(
-                    kind="new_commit",
-                    branch=self._branch,
-                    snapshot_id=snapshot_id,
-                    updated_at=flushed_at,
-                )
-            ],
+        # --- Step 5: Delegate repo file update to Repository ---
+        self._repo._apply_commit(
+            branch=self._branch,
+            snapshot_id=snapshot_id,
+            parent_snapshot_id=self._base_snapshot_id,
+            flushed_at=flushed_at,
+            message=message,
         )
-        self._storage.write("repo", repo_bytes)
 
         # Reset change tracking for potential further commits
         self._base_snapshot_id = snapshot_id
-        # Re-read the new state (refresh base nodes from what we just wrote)
         from icepyck.snapshot import SnapshotReader
 
         new_snap = SnapshotReader(storage=self._storage, snapshot_id=snapshot_id)
@@ -427,13 +397,6 @@ class WritableSession:
             )
 
         return nodes
-
-    def _find_snapshot_index(self, snapshot_id: bytes) -> int:
-        """Find the index of a snapshot_id in the repo's snapshot list."""
-        for i, (sid, _, _, _) in enumerate(self._repo_snapshots):
-            if sid == snapshot_id:
-                return i
-        return -1
 
 
 def _compute_extents(refs: list[ChunkRefData]) -> list[tuple[int, int]]:

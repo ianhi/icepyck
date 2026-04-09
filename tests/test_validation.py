@@ -199,7 +199,7 @@ class TestSnapshotIds:
             pytest.skip("No tags in this repo")
         for tag in ref_tags:
             ref_snap_id = ic_repo.lookup_tag(tag)
-            pyck_snap_bytes = pyck_repo._repo.get_tag_snapshot_id(tag)
+            pyck_snap_bytes = pyck_repo._state.get_snapshot_id_by_tag(tag)
             pyck_snap_id = crockford_encode(pyck_snap_bytes)
             assert pyck_snap_id == ref_snap_id, (
                 f"Tag {tag!r}: icepyck={pyck_snap_id}, icechunk={ref_snap_id}"
