@@ -4,13 +4,16 @@ Reads a repo's FlatBuffer files and checks all (required) fields,
 sorted order, V2 semantics, and structural invariants. Reports
 violations as a list of issues.
 
-Usage::
+Library usage::
 
     from icepyck.verify import verify_repo
     issues = verify_repo("/path/to/repo")
-    for issue in issues:
-        print(issue)
     assert not issues, f"Spec violations found: {issues}"
+
+CLI usage::
+
+    uv run python -m icepyck.verify /path/to/repo
+    icepyck-verify /path/to/repo          # if installed as console_script
 """
 
 from __future__ import annotations
@@ -445,3 +448,90 @@ def _get_manifest_ids_from_snapshot(snap: object) -> list[bytes]:
             ids.add(bytes(mid.Bytes()))
 
     return list(ids)
+
+
+# ---------------------------------------------------------------------------
+# Rich-formatted output
+# ---------------------------------------------------------------------------
+
+
+def print_report(
+    path: str | Path,
+    issues: list[Issue],
+) -> None:
+    """Print a rich-formatted verification report to the console."""
+    from rich.console import Console
+    from rich.table import Table
+    from rich.text import Text
+
+    console = Console()
+
+    if not issues:
+        console.print()
+        console.print(
+            Text(" PASS ", style="bold white on green"),
+            Text(f" {path}", style="bold"),
+        )
+        console.print(f"  No spec violations found.", style="dim")
+        console.print()
+        return
+
+    console.print()
+    console.print(
+        Text(" FAIL ", style="bold white on red"),
+        Text(f" {path}", style="bold"),
+    )
+    console.print(
+        f"  {len(issues)} spec violation{'s' if len(issues) != 1 else ''} found:",
+        style="dim",
+    )
+    console.print()
+
+    table = Table(show_header=True, header_style="bold", pad_edge=False)
+    table.add_column("File", style="cyan", no_wrap=True)
+    table.add_column("Field", style="yellow")
+    table.add_column("Issue", style="red")
+
+    for issue in issues:
+        table.add_row(issue.file, issue.field or "-", issue.message)
+
+    console.print(table)
+    console.print()
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point for the spec verifier.
+
+    Returns 0 if all repos pass, 1 if any violations are found.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="icepyck-verify",
+        description="Verify Icechunk V2 repository spec conformance.",
+    )
+    parser.add_argument(
+        "paths",
+        nargs="+",
+        metavar="REPO_PATH",
+        help="Path(s) to Icechunk repository root(s)",
+    )
+    args = parser.parse_args(argv)
+
+    any_failed = False
+    for repo_path in args.paths:
+        path = Path(repo_path)
+        if path.as_posix().startswith("s3://"):
+            from icepyck.storage import S3Storage
+            issues = verify_repo(path, storage=S3Storage(str(path)))
+        else:
+            issues = verify_repo(path)
+        print_report(path, issues)
+        if issues:
+            any_failed = True
+
+    return 1 if any_failed else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

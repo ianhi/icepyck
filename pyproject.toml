@@ -1,7 +1,7 @@
 [project]
 name = "icepyck"
 version = "0.1.0"
-description = "Read-only Python client for Icechunk, built from the spec"
+description = "Python client for Icechunk, built from the spec"
 readme = "README.md"
 authors = [
     { name = "Ian Hunt-Isaak", email = "ianhuntisaak@gmail.com" }
@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "flatbuffers",
+    "rich>=14.3.3",
     "s3fs",
     "zarr>=3",
     "zstandard",
@@ -27,6 +28,9 @@ dev = [
     "xarray>=2026.2.0",
     "zarr>=3",
 ]
+
+[project.scripts]
+icepyck-verify = "icepyck.verify:main"
 
 [build-system]
 requires = ["hatchling"]
