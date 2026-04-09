@@ -155,6 +155,7 @@ class Repository:
             NodeWriteData,
             build_repo,
             build_snapshot,
+            build_transaction_log,
         )
 
         if storage is None:
@@ -188,6 +189,13 @@ class Repository:
         from icepyck.crockford import encode as crockford_encode
 
         storage.write(f"snapshots/{crockford_encode(snapshot_id)}", snapshot_bytes)
+
+        # Transaction log for the initial snapshot (root group creation)
+        txn_bytes = build_transaction_log(
+            txn_id=snapshot_id,
+            new_groups=[root_node_id],
+        )
+        storage.write(f"transactions/{crockford_encode(snapshot_id)}", txn_bytes)
 
         repo_bytes = build_repo(
             spec_version=2,

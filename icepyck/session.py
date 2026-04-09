@@ -166,10 +166,39 @@ class WritableSession:
         self._deleted_paths.add(path)
         self._new_nodes.pop(path, None)
         self._modified_metadata.pop(path, None)
-        # Remove pending chunks for this path
         to_remove = [k for k in self._pending_chunks if k[0] == path]
         for k in to_remove:
             del self._pending_chunks[k]
+
+    def move_node(self, from_path: str, to_path: str) -> None:
+        """Move (rename) a node from one path to another.
+
+        The node must exist in the base snapshot or pending new nodes.
+        """
+        # Find the node
+        if from_path in self._new_nodes:
+            pnode = self._new_nodes.pop(from_path)
+            pnode.path = to_path
+            self._new_nodes[to_path] = pnode
+        elif from_path in self._base_nodes:
+            # Record the move: delete old, add new with same node_id
+            base = self._base_nodes[from_path]
+            self._deleted_paths.add(from_path)
+            self._new_nodes[to_path] = _PendingNode(
+                node_id=base.node_id,
+                path=to_path,
+                user_data=base.user_data,
+                node_type=base.node_type,
+            )
+            # Move any pending chunks
+            to_move = [
+                (k, v) for k, v in self._pending_chunks.items() if k[0] == from_path
+            ]
+            for (_, coords), data in to_move:
+                del self._pending_chunks[(from_path, coords)]
+                self._pending_chunks[(to_path, coords)] = data
+        else:
+            raise KeyError(f"Node not found: {from_path!r}")
 
     # ------------------------------------------------------------------
     # Commit

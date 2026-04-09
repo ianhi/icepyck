@@ -90,16 +90,39 @@ class TestNativeChunks:
 
 
 class TestVirtualChunks:
-    def test_virtual_chunk_raises(self):
-        virtual_ref = ChunkRefInfo(
+    def test_virtual_chunk_file_url(self, tmp_path):
+        """Virtual chunk with file:// URL reads from local file."""
+        data = b"hello world! extra bytes"
+        f = tmp_path / "data.bin"
+        f.write_bytes(data)
+
+        ref = ChunkRefInfo(
             index=(0,),
             chunk_type=ChunkType.VIRTUAL,
-            location="s3://bucket/key",
-            offset=0,
-            length=100,
+            location=f"file://{f}",
+            offset=6,
+            length=5,
         )
-        with pytest.raises(NotImplementedError, match="Virtual chunk"):
-            read_chunk("/tmp", virtual_ref)
+        result = read_chunk(None, ref)
+        assert result == b"world"
+
+    def test_virtual_chunk_no_location_raises(self):
+        ref = ChunkRefInfo(
+            index=(0,),
+            chunk_type=ChunkType.VIRTUAL,
+            location=None,
+        )
+        with pytest.raises(ValueError, match="no location"):
+            read_chunk(None, ref)
+
+    def test_virtual_chunk_unsupported_scheme_raises(self):
+        ref = ChunkRefInfo(
+            index=(0,),
+            chunk_type=ChunkType.VIRTUAL,
+            location="ftp://host/path",
+        )
+        with pytest.raises(ValueError, match="Unsupported"):
+            read_chunk(None, ref)
 
 
 class TestEdgeCases:

@@ -51,12 +51,54 @@ def read_chunk(
         return _slice_chunk(raw, chunk_ref)
 
     elif chunk_ref.chunk_type == ChunkType.VIRTUAL:
-        raise NotImplementedError(
-            f"Virtual chunk reading not implemented. Location: {chunk_ref.location}"
-        )
+        return _read_virtual_chunk(chunk_ref)
 
     else:
         raise ValueError(f"Unknown chunk type: {chunk_ref.chunk_type}")
+
+
+def _read_virtual_chunk(chunk_ref: ChunkRefInfo) -> bytes:
+    """Read a virtual chunk from an external URL (HTTP/S3)."""
+    if not chunk_ref.location:
+        raise ValueError("Virtual chunk ref has no location URL")
+
+    loc = chunk_ref.location
+    start = chunk_ref.offset
+    end = start + chunk_ref.length if chunk_ref.length > 0 else 0
+
+    if loc.startswith("http://") or loc.startswith("https://"):
+        import urllib.request
+
+        req = urllib.request.Request(loc)
+        if end > 0:
+            req.add_header("Range", f"bytes={start}-{end - 1}")
+        with urllib.request.urlopen(req) as resp:  # noqa: S310
+            data = resp.read()
+        # If no Range header was used, slice manually
+        if end > 0 and "Range" not in req.headers:
+            data = data[start:end]
+        return data
+
+    elif loc.startswith("s3://"):
+        import s3fs  # type: ignore[import-not-found]
+
+        fs = s3fs.S3FileSystem(anon=True)
+        s3_path = loc.removeprefix("s3://")
+        if end > 0:
+            return fs.cat_file(s3_path, start=start, end=end)  # type: ignore[no-any-return]
+        return fs.cat_file(s3_path)[start:]  # type: ignore[no-any-return]
+
+    elif loc.startswith("file://"):
+        from pathlib import Path
+
+        file_path = Path(loc.removeprefix("file://"))
+        data = file_path.read_bytes()
+        if end > 0:
+            return data[start:end]
+        return data[start:]
+
+    else:
+        raise ValueError(f"Unsupported virtual chunk URL scheme: {loc!r}")
 
 
 async def aread_chunk(
@@ -95,9 +137,8 @@ async def aread_chunk(
         return _slice_chunk(raw, chunk_ref)
 
     elif chunk_ref.chunk_type == ChunkType.VIRTUAL:
-        raise NotImplementedError(
-            f"Virtual chunk reading not implemented. Location: {chunk_ref.location}"
-        )
+        # Virtual chunks don't benefit from async — delegate to sync
+        return _read_virtual_chunk(chunk_ref)
 
     else:
         raise ValueError(f"Unknown chunk type: {chunk_ref.chunk_type}")
