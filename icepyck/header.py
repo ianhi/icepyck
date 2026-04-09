@@ -88,6 +88,33 @@ def parse_bytes(raw: bytes) -> tuple[Header, bytes]:
     return header, payload
 
 
+def build_bytes(
+    payload: bytes,
+    file_type: FileType,
+    *,
+    compression: Compression = Compression.ZSTD,
+    spec_version: int = 2,
+    implementation: str = "icepyck",
+) -> bytes:
+    """Build a complete Icechunk file (header + optionally compressed payload).
+
+    This is the inverse of :func:`parse_bytes`.
+    """
+    impl_bytes = implementation.encode("utf-8")[:24].ljust(24)
+
+    header = (
+        MAGIC
+        + impl_bytes
+        + bytes([spec_version, file_type, compression])
+    )
+
+    if compression == Compression.ZSTD:
+        cctx = zstandard.ZstdCompressor()
+        payload = cctx.compress(payload)
+
+    return header + payload
+
+
 def parse_file(path: str | Path) -> tuple[Header, bytes]:
     """Parse an Icechunk file, returning (header, decompressed payload)."""
     raw = Path(path).read_bytes()

@@ -12,10 +12,14 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class Storage(Protocol):
-    """Protocol for reading files from a storage backend."""
+    """Protocol for reading and writing files from a storage backend."""
 
     def read(self, path: str) -> bytes:
         """Read the entire contents of a file."""
+        ...
+
+    def write(self, path: str, data: bytes) -> None:
+        """Write data to a file, creating parent directories as needed."""
         ...
 
     def exists(self, path: str) -> bool:
@@ -35,6 +39,11 @@ class LocalStorage:
 
     def read(self, path: str) -> bytes:
         return (self._root / path).read_bytes()
+
+    def write(self, path: str, data: bytes) -> None:
+        target = self._root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
 
     def exists(self, path: str) -> bool:
         return (self._root / path).exists()
@@ -92,6 +101,12 @@ class S3Storage:
 
     def exists(self, path: str) -> bool:
         return self._sync_fs.exists(f"{self._root}/{path}")  # type: ignore[no-any-return]
+
+    def write(self, path: str, data: bytes) -> None:
+        full = f"{self._root}/{path}"
+        self._sync_fs.pipe_file(full, data)
+        # Invalidate cache for this path
+        self._cache.pop(path, None)
 
     def list_prefix(self, prefix: str) -> list[str]:
         full = f"{self._root}/{prefix}"

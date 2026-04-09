@@ -1,4 +1,4 @@
-"""Icepyck — a read-only Python client for Icechunk repositories."""
+"""Icepyck — a Python client for Icechunk repositories."""
 
 from __future__ import annotations
 
@@ -8,11 +8,20 @@ from pathlib import Path
 from icepyck.chunks import read_chunk
 from icepyck.manifest import ChunkRefInfo, ManifestReader
 from icepyck.repo import RepoInfo
+from icepyck.session import WritableSession
 from icepyck.snapshot import NodeInfo, SnapshotReader
 from icepyck.storage import LocalStorage, S3Storage, Storage
 from icepyck.store import IcechunkReadStore
 
-__all__ = ["LocalStorage", "Repository", "S3Storage", "Session", "Storage", "open"]
+__all__ = [
+    "LocalStorage",
+    "Repository",
+    "S3Storage",
+    "Session",
+    "Storage",
+    "WritableSession",
+    "open",
+]
 
 
 def open(
@@ -51,6 +60,10 @@ def open(
     return Repository(storage=storage)
 
 
+_INITIAL_SNAPSHOT_ID = bytes.fromhex("0b1cc8d6787580f0e33a6534")
+"""Well-known ID for the initial empty snapshot (1CECHNKREP0F1RSTCMT0)."""
+
+
 class Session:
     """A read-only session bound to a specific snapshot.
 
@@ -70,6 +83,30 @@ class Session:
         self._snapshot_id = snapshot_id
         self._snapshot = repo._get_snapshot_by_id(snapshot_id)
         self._store: IcechunkReadStore | None = None
+
+    @property
+    def snapshot_id(self) -> str:
+        """The Crockford Base32 snapshot ID this session is bound to."""
+        from icepyck.crockford import encode as crockford_encode
+
+        return crockford_encode(self._snapshot_id)
+
+    @property
+    def snapshot_id_bytes(self) -> bytes:
+        """The raw 12-byte snapshot ID this session is bound to."""
+        return self._snapshot_id
+
+    def __repr__(self) -> str:
+        from icepyck.crockford import encode as crockford_encode
+
+        sid = crockford_encode(self._snapshot_id)
+        nodes = self._snapshot.list_nodes()
+        n_arrays = sum(1 for n in nodes if n.node_type == "array")
+        n_groups = sum(1 for n in nodes if n.node_type == "group")
+        return (
+            f"Session(snapshot={sid!r}, "
+            f"arrays={n_arrays}, groups={n_groups}, read_only=True)"
+        )
 
     @property
     def store(self) -> IcechunkReadStore:
@@ -125,6 +162,82 @@ class Repository:
         Storage backend.  When provided, all I/O goes through it.
     """
 
+    @staticmethod
+    def init(
+        path: str | Path,
+        *,
+        storage: Storage | None = None,
+    ) -> "Repository":
+        """Initialize a new empty Icechunk repository.
+
+        Creates the initial empty snapshot and repo file with a ``main``
+        branch pointing to it.
+
+        Parameters
+        ----------
+        path : str or Path
+            Root path for the repository.
+        storage : Storage, optional
+            Storage backend. If not provided, uses :class:`LocalStorage`.
+        """
+        from icepyck.writers import (
+            NodeWriteData,
+            SnapshotInfoData,
+            build_repo,
+            build_snapshot,
+        )
+
+        if storage is None:
+            storage = LocalStorage(str(path))
+
+        snapshot_id = _INITIAL_SNAPSHOT_ID
+        flushed_at = int(__import__("time").time() * 1_000_000)
+
+        # Write initial empty snapshot with just a root group
+        root_meta = json.dumps({
+            "zarr_format": 3,
+            "node_type": "group",
+        }).encode()
+        from icepyck.ids import generate_id8
+
+        root_node_id = generate_id8()
+        snapshot_bytes = build_snapshot(
+            snapshot_id=snapshot_id,
+            nodes=[
+                NodeWriteData(
+                    node_id=root_node_id,
+                    path="/",
+                    user_data=root_meta,
+                    node_type="group",
+                )
+            ],
+            message="Repository initialized",
+            flushed_at=flushed_at,
+        )
+        from icepyck.crockford import encode as crockford_encode
+
+        storage.write(
+            f"snapshots/{crockford_encode(snapshot_id)}", snapshot_bytes
+        )
+
+        # Write repo file
+        repo_bytes = build_repo(
+            spec_version=2,
+            branches={"main": 0},
+            tags={},
+            snapshots=[
+                SnapshotInfoData(
+                    snapshot_id=snapshot_id,
+                    parent_offset=-1,
+                    flushed_at=flushed_at,
+                    message="Repository initialized",
+                )
+            ],
+        )
+        storage.write("repo", repo_bytes)
+
+        return Repository(storage=storage)
+
     def __init__(
         self,
         path: str | Path | None = None,
@@ -143,6 +256,14 @@ class Repository:
             raise TypeError("Either path or storage must be provided")
         self._snapshot_cache: dict[bytes, SnapshotReader] = {}
         self._manifest_cache: dict[bytes, ManifestReader] = {}
+
+    def __repr__(self) -> str:
+        branches = self._repo.list_branches()
+        tags = self._repo.list_tags()
+        parts = [f"branches={branches!r}"]
+        if tags:
+            parts.append(f"tags={tags!r}")
+        return f"Repository({', '.join(parts)})"
 
     # ------------------------------------------------------------------
     # Session-based API (primary)
@@ -166,7 +287,9 @@ class Repository:
         tag : str, optional
             A tag name (e.g. ``"v1"``).
         snapshot : str, optional
-            A hex-encoded snapshot ID.
+            A snapshot ID as a Crockford Base32 string (e.g.
+            ``"RF238TWZTXGD49BDPXWG"``), a unique prefix thereof,
+            or a hex-encoded ID.
 
         Returns
         -------
@@ -187,6 +310,69 @@ class Repository:
             ref = snapshot  # type: ignore[assignment]
         snapshot_id = self._resolve_ref(ref)
         return Session(self, snapshot_id)
+
+    def writable_session(
+        self,
+        *,
+        branch: str = "main",
+    ) -> WritableSession:
+        """Get a writable session for a branch.
+
+        Changes made through the session are buffered in memory until
+        :meth:`WritableSession.commit` is called.
+
+        Parameters
+        ----------
+        branch : str
+            Branch name to commit to (default ``"main"``).
+        """
+        snapshot_id = self._resolve_ref(branch)
+        snapshot = self._get_snapshot_by_id(snapshot_id)
+        if self._storage is None:
+            raise TypeError("Writable sessions require a storage backend")
+        return WritableSession(
+            storage=self._storage,
+            branch=branch,
+            base_snapshot_id=snapshot_id,
+            base_nodes=snapshot.list_nodes(),
+            repo_snapshots=self._repo.get_snapshots_data(),
+            repo_branches=self._repo.get_branches_data(),
+            repo_tags=self._repo.get_tags_data(),
+        )
+
+    def log(self, branch: str = "main") -> list[dict[str, object]]:
+        """Return the commit ancestry for a branch, newest first.
+
+        Each entry has keys: ``id``, ``parent``, ``message``, ``flushed_at``.
+        """
+        from datetime import datetime, timezone
+
+        from icepyck.crockford import encode as crockford_encode
+
+        snapshots = self._repo.get_snapshots_data()
+        branches = self._repo.get_branches_data()
+
+        if branch not in branches:
+            raise KeyError(f"Branch not found: {branch!r}")
+
+        # Walk the parent chain from the branch tip
+        idx = branches[branch]
+        result = []
+        visited: set[int] = set()
+        while idx >= 0 and idx not in visited:
+            visited.add(idx)
+            sid, parent_offset, flushed_at, message = snapshots[idx]
+            ts = datetime.fromtimestamp(
+                flushed_at / 1_000_000, tz=timezone.utc
+            )
+            result.append({
+                "id": crockford_encode(sid),
+                "parent": crockford_encode(snapshots[parent_offset][0]) if parent_offset >= 0 else None,
+                "message": message,
+                "time": ts.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            })
+            idx = parent_offset
+        return result
 
     def list_branches(self) -> list[str]:
         """Return the names of all branches."""
@@ -299,8 +485,19 @@ class Repository:
     def _resolve_ref(self, ref: str) -> bytes:
         """Resolve a ref string to a 12-byte snapshot ID.
 
-        Tries branch names first, then tags, then hex-encoded snapshot IDs.
+        Resolution order:
+        1. Branch name
+        2. Tag name
+        3. Full Crockford Base32 ID (20 chars, e.g. ``"RF238TWZTXGD49BDPXWG"``)
+        4. Crockford prefix (unique prefix match against known snapshots)
+        5. Full hex-encoded ID (24 hex chars)
+
+        Shortened Crockford prefixes are accepted as long as they
+        uniquely identify a single snapshot (like git's short SHAs).
         """
+        from icepyck.crockford import decode as crockford_decode
+        from icepyck.crockford import encode as crockford_encode
+
         # Try branch
         try:
             return self._repo.get_snapshot_id(ref)
@@ -311,6 +508,28 @@ class Repository:
             return self._repo.get_tag_snapshot_id(ref)
         except KeyError:
             pass
+        # Try full Crockford Base32 (20-char uppercase string → 12 bytes)
+        try:
+            raw = crockford_decode(ref)
+            if len(raw) == 12:
+                return raw
+        except (ValueError, KeyError):
+            pass
+        # Try Crockford prefix match against known snapshot IDs
+        ref_upper = ref.upper()
+        if ref_upper and all(c in "0123456789ABCDEFGHJKMNPQRSTVWXYZ" for c in ref_upper):
+            all_ids = self._repo.get_snapshots_data()
+            matches = [
+                sid for sid, _, _, _ in all_ids
+                if crockford_encode(sid).startswith(ref_upper)
+            ]
+            if len(matches) == 1:
+                return matches[0]
+            if len(matches) > 1:
+                raise KeyError(
+                    f"Ambiguous ref {ref!r}: matches {len(matches)} snapshots. "
+                    f"Use more characters to disambiguate."
+                )
         # Try hex-encoded snapshot ID
         try:
             raw = bytes.fromhex(ref)

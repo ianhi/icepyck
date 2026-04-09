@@ -85,6 +85,34 @@ class RepoInfo:
                 return bytes(self._snapshot_ids[ref.SnapshotIndex()])
         raise KeyError(f"Tag not found: {tag_name!r}")
 
+    def get_snapshots_data(self) -> list[tuple[bytes, int, int, str]]:
+        """Return (id, parent_offset, flushed_at, message) for all snapshots."""
+        result = []
+        for i in range(self._repo.SnapshotsLength()):
+            snap = self._repo.Snapshots(i)
+            sid = bytes(snap.Id().Bytes())
+            parent_offset = snap.ParentOffset()
+            flushed_at = snap.FlushedAt()
+            msg = snap.Message()
+            if isinstance(msg, bytes):
+                msg = msg.decode("utf-8")
+            result.append((sid, parent_offset, flushed_at, msg or ""))
+        return result
+
+    def get_branches_data(self) -> dict[str, int]:
+        """Return branch name -> snapshot index mapping."""
+        return {
+            _decode(self._repo.Branches(i).Name()): self._repo.Branches(i).SnapshotIndex()
+            for i in range(self._repo.BranchesLength())
+        }
+
+    def get_tags_data(self) -> dict[str, int]:
+        """Return tag name -> snapshot index mapping."""
+        return {
+            _decode(self._repo.Tags(i).Name()): self._repo.Tags(i).SnapshotIndex()
+            for i in range(self._repo.TagsLength())
+        }
+
     @staticmethod
     def snapshot_id_to_path(snapshot_id: bytes) -> str:
         """Convert a 12-byte snapshot ID to its Crockford Base32 filename."""

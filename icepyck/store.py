@@ -553,3 +553,147 @@ class IcechunkReadStore(Store):
                         entries.append(entry)
 
         return entries
+
+
+class IcechunkStore(Store):
+    """Read-write zarr v3 Store backed by a WritableSession.
+
+    Writes are buffered in-memory. Call :meth:`WritableSession.commit`
+    to persist them. Reads check pending changes first, then fall back
+    to the base snapshot.
+    """
+
+    def __init__(self, session: object) -> None:
+        # session is WritableSession but we use object to avoid circular import
+        super().__init__(read_only=False)
+        self._session = session
+        self._is_open = True
+
+        # Pending writes: key -> bytes (zarr.json metadata or chunk data)
+        self._pending: dict[str, bytes] = {}
+        # Deleted keys
+        self._deleted: set[str] = set()
+
+    @property
+    def supports_writes(self) -> bool:  # type: ignore[override]
+        return True
+
+    @property
+    def supports_deletes(self) -> bool:  # type: ignore[override]
+        return True
+
+    @property
+    def supports_listing(self) -> bool:  # type: ignore[override]
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, IcechunkStore):
+            return NotImplemented
+        return self._session is other._session
+
+    async def set(self, key: str, value: Buffer) -> None:
+        data = value.to_bytes()
+        self._pending[key] = data
+        self._deleted.discard(key)
+
+        # Route to session's change tracking
+        node_path, kind = _parse_key(key)
+        if kind == "metadata":
+            self._session.set_metadata(node_path, data)  # type: ignore[attr-defined]
+        elif isinstance(kind, tuple):
+            self._session.set_chunk(node_path, kind, data)  # type: ignore[attr-defined]
+
+    async def get(
+        self,
+        key: str,
+        prototype: BufferPrototype,
+        byte_range: ByteRequest | None = None,
+    ) -> Buffer | None:
+        # Check deleted
+        if key in self._deleted:
+            return None
+
+        # Check pending writes first
+        if key in self._pending:
+            data = _apply_byte_range(self._pending[key], byte_range)
+            return prototype.buffer.from_bytes(data)
+
+        # Fall back to base snapshot read via a read store
+        read_store = self._get_read_store()
+        return await read_store.get(key, prototype, byte_range)
+
+    async def get_partial_values(
+        self,
+        prototype: BufferPrototype,
+        key_ranges: Iterable[tuple[str, ByteRequest | None]],
+    ) -> list[Buffer | None]:
+        key_ranges_list = list(key_ranges)
+        return list(
+            await asyncio.gather(
+                *(
+                    self.get(key, prototype, byte_range=br)
+                    for key, br in key_ranges_list
+                )
+            )
+        )
+
+    async def delete(self, key: str) -> None:
+        self._deleted.add(key)
+        self._pending.pop(key, None)
+        node_path, kind = _parse_key(key)
+        if kind == "metadata" or isinstance(kind, tuple):
+            self._session.delete_node(node_path)  # type: ignore[attr-defined]
+
+    async def exists(self, key: str) -> bool:
+        if key in self._deleted:
+            return False
+        if key in self._pending:
+            return True
+        read_store = self._get_read_store()
+        return await read_store.exists(key)
+
+    async def list(self) -> AsyncGenerator[str, None]:
+        read_store = self._get_read_store()
+        seen: set[str] = set()
+        # Yield from pending writes
+        for key in self._pending:
+            if key not in self._deleted:
+                seen.add(key)
+                yield key
+        # Yield from base snapshot
+        async for key in read_store.list():
+            if key not in self._deleted and key not in seen:
+                yield key
+
+    async def list_prefix(self, prefix: str) -> AsyncGenerator[str, None]:
+        async for key in self.list():
+            if key.startswith(prefix):
+                yield key
+
+    async def list_dir(self, prefix: str) -> AsyncGenerator[str, None]:
+        if prefix and not prefix.endswith("/"):
+            prefix = prefix + "/"
+        seen: set[str] = set()
+        async for key in self.list():
+            if not key.startswith(prefix):
+                continue
+            remainder = key[len(prefix):]
+            entry = remainder.split("/")[0] + "/" if "/" in remainder else remainder
+            if entry and entry not in seen:
+                seen.add(entry)
+                yield entry
+
+    def _get_read_store(self) -> IcechunkReadStore:
+        """Lazily build a read store from the session's base snapshot."""
+        if not hasattr(self, "_read_store"):
+            from icepyck.snapshot import SnapshotReader
+
+            snap = SnapshotReader(
+                storage=self._session._storage,  # type: ignore[attr-defined]
+                snapshot_id=self._session._base_snapshot_id,  # type: ignore[attr-defined]
+            )
+            self._read_store = IcechunkReadStore(
+                snapshot=snap,
+                storage=self._session._storage,  # type: ignore[attr-defined]
+            )
+        return self._read_store
