@@ -104,6 +104,7 @@ class SnapshotReader:
 
         # Parse all nodes upfront
         self._nodes: list[NodeInfo] = []
+        self._nodes_by_path: dict[str, NodeInfo] = {}
         self._array_nodes: dict[str, NodeInfo] = {}  # path -> NodeInfo
 
         for i in range(snapshot.NodesLength()):
@@ -168,15 +169,28 @@ class SnapshotReader:
                 manifest_refs=manifest_refs,
             )
             self._nodes.append(info)
+            self._nodes_by_path[node_path] = info
             if node_type == "array":
                 self._array_nodes[node_path] = info
 
     def list_nodes(self) -> list[NodeInfo]:
         """List all nodes with path, type, and metadata."""
-        return list(self._nodes)
+        return self._nodes
+
+    def get_node(self, path: str) -> NodeInfo:
+        """Get a node by path. O(1) dict lookup."""
+        try:
+            return self._nodes_by_path[path]
+        except KeyError:
+            raise KeyError(f"Node not found: {path!r}") from None
+
+    def get_array_node(self, path: str) -> NodeInfo:
+        """Get an array node by path. O(1) dict lookup."""
+        try:
+            return self._array_nodes[path]
+        except KeyError:
+            raise KeyError(f"Array node not found: {path!r}") from None
 
     def get_array_manifest_refs(self, path: str) -> list[ManifestRefInfo]:
         """Get manifest refs for an array node by its path."""
-        if path not in self._array_nodes:
-            raise KeyError(f"Array node not found: {path!r}")
-        return self._array_nodes[path].manifest_refs
+        return self.get_array_node(path).manifest_refs

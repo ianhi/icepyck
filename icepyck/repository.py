@@ -122,10 +122,7 @@ class Session:
         return json.loads(node.user_data)  # type: ignore[no-any-return]
 
     def _get_array_node(self, array_path: str) -> NodeInfo:
-        for node in self._snapshot.list_nodes():
-            if node.path == array_path and node.node_type == "array":
-                return node
-        raise KeyError(f"Array node not found: {array_path!r}")
+        return self._snapshot.get_array_node(array_path)
 
 
 class Repository:
@@ -569,10 +566,7 @@ class Repository:
 
     @staticmethod
     def _get_array_node(snapshot: SnapshotReader, array_path: str) -> NodeInfo:
-        for node in snapshot.list_nodes():
-            if node.path == array_path and node.node_type == "array":
-                return node
-        raise KeyError(f"Array node not found: {array_path!r}")
+        return snapshot.get_array_node(array_path)
 
     def _find_chunk_ref(
         self, ref: str, array_path: str, chunk_index: tuple[int, ...]
