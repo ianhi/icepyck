@@ -22,6 +22,7 @@ from icepyck.writers import (
     ManifestRefData,
     NodeWriteData,
     SnapshotInfoData,
+    UpdateData,
     build_manifest,
     build_repo,
     build_snapshot,
@@ -300,6 +301,14 @@ class WritableSession:
                     message=msg,
                 )
                 for sid, poff, fat, msg in self._repo_snapshots
+            ],
+            updates=[
+                UpdateData(
+                    kind="new_commit",
+                    branch=self._branch,
+                    snapshot_id=snapshot_id,
+                    updated_at=flushed_at,
+                )
             ],
         )
         self._storage.write("repo", repo_bytes)

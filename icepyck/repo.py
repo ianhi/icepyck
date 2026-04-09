@@ -113,6 +113,15 @@ class RepoInfo:
             for i in range(self._repo.TagsLength())
         }
 
+    def get_deleted_tags(self) -> list[str]:
+        """Return list of deleted tag names."""
+        result = []
+        for i in range(self._repo.DeletedTagsLength()):
+            name = self._repo.DeletedTags(i)
+            if name is not None:
+                result.append(_decode(name))
+        return result
+
     @staticmethod
     def snapshot_id_to_path(snapshot_id: bytes) -> str:
         """Convert a 12-byte snapshot ID to its Crockford Base32 filename."""

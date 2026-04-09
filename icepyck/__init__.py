@@ -12,6 +12,7 @@ from icepyck.session import WritableSession
 from icepyck.snapshot import NodeInfo, SnapshotReader
 from icepyck.storage import LocalStorage, S3Storage, Storage
 from icepyck.store import IcechunkReadStore
+from icepyck.writers import UpdateData
 
 __all__ = [
     "LocalStorage",
@@ -233,6 +234,9 @@ class Repository:
                     message="Repository initialized",
                 )
             ],
+            updates=[
+                UpdateData(kind="repo_initialized", updated_at=flushed_at),
+            ],
         )
         storage.write("repo", repo_bytes)
 
@@ -373,6 +377,125 @@ class Repository:
             })
             idx = parent_offset
         return result
+
+    def create_branch(self, name: str, snapshot: str) -> None:
+        """Create a new branch pointing to the given snapshot.
+
+        Parameters
+        ----------
+        name : str
+            Branch name (must not contain ``/``).
+        snapshot : str
+            Snapshot ref (branch, tag, Crockford ID, or hex ID).
+        """
+        if "/" in name:
+            raise ValueError("Branch names must not contain '/'")
+        branches = self._repo.get_branches_data()
+        if name in branches:
+            raise KeyError(f"Branch already exists: {name!r}")
+        snapshot_id = self._resolve_ref(snapshot)
+        snapshots = self._repo.get_snapshots_data()
+        # Find the snapshot index
+        snap_idx = next(
+            (i for i, (sid, *_) in enumerate(snapshots) if sid == snapshot_id),
+            None,
+        )
+        if snap_idx is None:
+            raise KeyError(f"Snapshot not found: {snapshot!r}")
+        branches[name] = snap_idx
+        self._write_repo(
+            branches=branches,
+            updates=[UpdateData(kind="branch_created", name=name)],
+        )
+
+    def delete_branch(self, name: str) -> None:
+        """Delete a branch.
+
+        Parameters
+        ----------
+        name : str
+            Branch name. Cannot delete ``"main"``.
+        """
+        if name == "main":
+            raise ValueError("Cannot delete the 'main' branch")
+        branches = self._repo.get_branches_data()
+        if name not in branches:
+            raise KeyError(f"Branch not found: {name!r}")
+        snap_idx = branches.pop(name)
+        snapshots = self._repo.get_snapshots_data()
+        prev_snap_id = snapshots[snap_idx][0]
+        self._write_repo(
+            branches=branches,
+            updates=[
+                UpdateData(
+                    kind="branch_deleted",
+                    name=name,
+                    previous_snap_id=prev_snap_id,
+                )
+            ],
+        )
+
+    def create_tag(self, name: str, snapshot: str) -> None:
+        """Create an immutable tag pointing to the given snapshot.
+
+        Parameters
+        ----------
+        name : str
+            Tag name (must not contain ``/``).
+        snapshot : str
+            Snapshot ref (branch, tag, Crockford ID, or hex ID).
+        """
+        if "/" in name:
+            raise ValueError("Tag names must not contain '/'")
+        tags = self._repo.get_tags_data()
+        if name in tags:
+            raise KeyError(f"Tag already exists: {name!r}")
+        deleted = self._repo.get_deleted_tags()
+        if name in deleted:
+            raise KeyError(
+                f"Tag {name!r} was previously deleted and cannot be recreated"
+            )
+        snapshot_id = self._resolve_ref(snapshot)
+        snapshots = self._repo.get_snapshots_data()
+        snap_idx = next(
+            (i for i, (sid, *_) in enumerate(snapshots) if sid == snapshot_id),
+            None,
+        )
+        if snap_idx is None:
+            raise KeyError(f"Snapshot not found: {snapshot!r}")
+        tags[name] = snap_idx
+        self._write_repo(
+            tags=tags,
+            updates=[UpdateData(kind="tag_created", name=name)],
+        )
+
+    def delete_tag(self, name: str) -> None:
+        """Delete a tag (adds a tombstone — tag name cannot be reused).
+
+        Parameters
+        ----------
+        name : str
+            Tag name.
+        """
+        tags = self._repo.get_tags_data()
+        if name not in tags:
+            raise KeyError(f"Tag not found: {name!r}")
+        snap_idx = tags.pop(name)
+        snapshots = self._repo.get_snapshots_data()
+        prev_snap_id = snapshots[snap_idx][0]
+        deleted = self._repo.get_deleted_tags()
+        deleted.append(name)
+        self._write_repo(
+            tags=tags,
+            deleted_tags=deleted,
+            updates=[
+                UpdateData(
+                    kind="tag_deleted",
+                    name=name,
+                    previous_snap_id=prev_snap_id,
+                )
+            ],
+        )
 
     def list_branches(self) -> list[str]:
         """Return the names of all branches."""
@@ -538,6 +661,48 @@ class Repository:
         except ValueError:
             pass
         raise KeyError(f"Could not resolve ref: {ref!r}")
+
+    def _write_repo(
+        self,
+        branches: dict[str, int] | None = None,
+        tags: dict[str, int] | None = None,
+        deleted_tags: list[str] | None = None,
+        updates: list[UpdateData] | None = None,
+    ) -> None:
+        """Rebuild and write the repo file with updated state."""
+        from icepyck.writers import (
+            SnapshotInfoData,
+            build_repo,
+        )
+
+        if self._storage is None:
+            raise TypeError("Writing requires a storage backend")
+
+        repo_branches = branches if branches is not None else self._repo.get_branches_data()
+        repo_tags = tags if tags is not None else self._repo.get_tags_data()
+        repo_deleted_tags = deleted_tags if deleted_tags is not None else self._repo.get_deleted_tags()
+        snapshots = self._repo.get_snapshots_data()
+
+        repo_bytes = build_repo(
+            spec_version=2,
+            branches=repo_branches,
+            tags=repo_tags,
+            snapshots=[
+                SnapshotInfoData(
+                    snapshot_id=sid,
+                    parent_offset=poff,
+                    flushed_at=fat,
+                    message=msg,
+                )
+                for sid, poff, fat, msg in snapshots
+            ],
+            deleted_tags=repo_deleted_tags,
+            updates=updates,
+        )
+        self._storage.write("repo", repo_bytes)
+        # Reload repo state
+        self._repo = RepoInfo(storage=self._storage)
+        self._snapshot_cache.clear()
 
     def _get_snapshot(self, ref: str) -> SnapshotReader:
         """Return a (cached) SnapshotReader for the given ref."""

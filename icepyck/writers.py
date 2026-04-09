@@ -171,6 +171,46 @@ from icepyck.generated.TransactionLog import (
     TransactionLogStartUpdatedChunksVector,
     TransactionLogStartUpdatedGroupsVector,
 )
+from icepyck.generated.Update import (
+    UpdateAddUpdatedAt,
+    UpdateAddUpdateType,
+    UpdateAddUpdateTypeType,
+    UpdateEnd,
+    UpdateStart,
+)
+from icepyck.generated.UpdateType import UpdateType
+from icepyck.generated.BranchCreatedUpdate import (
+    BranchCreatedUpdateAddName,
+    BranchCreatedUpdateEnd,
+    BranchCreatedUpdateStart,
+)
+from icepyck.generated.BranchDeletedUpdate import (
+    BranchDeletedUpdateAddName,
+    BranchDeletedUpdateAddPreviousSnapId,
+    BranchDeletedUpdateEnd,
+    BranchDeletedUpdateStart,
+)
+from icepyck.generated.TagCreatedUpdate import (
+    TagCreatedUpdateAddName,
+    TagCreatedUpdateEnd,
+    TagCreatedUpdateStart,
+)
+from icepyck.generated.TagDeletedUpdate import (
+    TagDeletedUpdateAddName,
+    TagDeletedUpdateAddPreviousSnapId,
+    TagDeletedUpdateEnd,
+    TagDeletedUpdateStart,
+)
+from icepyck.generated.NewCommitUpdate import (
+    NewCommitUpdateAddBranch,
+    NewCommitUpdateAddNewSnapId,
+    NewCommitUpdateEnd,
+    NewCommitUpdateStart,
+)
+from icepyck.generated.RepoInitializedUpdate import (
+    RepoInitializedUpdateEnd,
+    RepoInitializedUpdateStart,
+)
 from icepyck.header import Compression, FileType, build_bytes
 
 # ---------------------------------------------------------------------------
@@ -241,6 +281,27 @@ class ArrayUpdatedChunksData:
 
     node_id: bytes  # ObjectId8 (8 bytes)
     chunk_indices: list[tuple[int, ...]] = field(default_factory=list)
+
+
+@dataclass
+class UpdateData:
+    """Input data for a repo update entry.
+
+    The ``kind`` field selects which union variant to build:
+    - ``"repo_initialized"``
+    - ``"branch_created"`` (requires ``name``)
+    - ``"branch_deleted"`` (requires ``name``, optional ``previous_snap_id``)
+    - ``"tag_created"`` (requires ``name``)
+    - ``"tag_deleted"`` (requires ``name``, optional ``previous_snap_id``)
+    - ``"new_commit"`` (requires ``branch``, ``snapshot_id``)
+    """
+
+    kind: str
+    updated_at: int = 0  # microseconds since epoch; 0 = auto-fill
+    name: str = ""  # branch or tag name
+    branch: str = ""  # for new_commit
+    snapshot_id: bytes | None = None  # ObjectId12 for new_commit
+    previous_snap_id: bytes | None = None  # for delete operations
 
 
 # ---------------------------------------------------------------------------
@@ -685,11 +746,79 @@ def _build_snapshot_info(
     return SnapshotInfoEnd(builder)
 
 
+def _build_update(builder: flatbuffers.Builder, upd: UpdateData) -> int:
+    """Build an Update table (union wrapper around a specific update type)."""
+    now = upd.updated_at or int(time.time() * 1_000_000)
+
+    if upd.kind == "repo_initialized":
+        RepoInitializedUpdateStart(builder)
+        inner_off = RepoInitializedUpdateEnd(builder)
+        type_id = UpdateType.RepoInitializedUpdate
+
+    elif upd.kind == "branch_created":
+        name_off = builder.CreateString(upd.name)
+        BranchCreatedUpdateStart(builder)
+        BranchCreatedUpdateAddName(builder, name_off)
+        inner_off = BranchCreatedUpdateEnd(builder)
+        type_id = UpdateType.BranchCreatedUpdate
+
+    elif upd.kind == "branch_deleted":
+        name_off = builder.CreateString(upd.name)
+        BranchDeletedUpdateStart(builder)
+        BranchDeletedUpdateAddName(builder, name_off)
+        if upd.previous_snap_id is not None:
+            BranchDeletedUpdateAddPreviousSnapId(
+                builder, CreateObjectId12(builder, list(upd.previous_snap_id))
+            )
+        inner_off = BranchDeletedUpdateEnd(builder)
+        type_id = UpdateType.BranchDeletedUpdate
+
+    elif upd.kind == "tag_created":
+        name_off = builder.CreateString(upd.name)
+        TagCreatedUpdateStart(builder)
+        TagCreatedUpdateAddName(builder, name_off)
+        inner_off = TagCreatedUpdateEnd(builder)
+        type_id = UpdateType.TagCreatedUpdate
+
+    elif upd.kind == "tag_deleted":
+        name_off = builder.CreateString(upd.name)
+        TagDeletedUpdateStart(builder)
+        TagDeletedUpdateAddName(builder, name_off)
+        if upd.previous_snap_id is not None:
+            TagDeletedUpdateAddPreviousSnapId(
+                builder, CreateObjectId12(builder, list(upd.previous_snap_id))
+            )
+        inner_off = TagDeletedUpdateEnd(builder)
+        type_id = UpdateType.TagDeletedUpdate
+
+    elif upd.kind == "new_commit":
+        branch_off = builder.CreateString(upd.branch)
+        NewCommitUpdateStart(builder)
+        NewCommitUpdateAddBranch(builder, branch_off)
+        if upd.snapshot_id is not None:
+            NewCommitUpdateAddNewSnapId(
+                builder, CreateObjectId12(builder, list(upd.snapshot_id))
+            )
+        inner_off = NewCommitUpdateEnd(builder)
+        type_id = UpdateType.NewCommitUpdate
+
+    else:
+        raise ValueError(f"Unknown update kind: {upd.kind!r}")
+
+    UpdateStart(builder)
+    UpdateAddUpdateTypeType(builder, type_id)
+    UpdateAddUpdateType(builder, inner_off)
+    UpdateAddUpdatedAt(builder, now)
+    return UpdateEnd(builder)
+
+
 def build_repo_payload(
     spec_version: int,
     branches: dict[str, int],
     tags: dict[str, int],
     snapshots: list[SnapshotInfoData],
+    deleted_tags: list[str] | None = None,
+    updates: list[UpdateData] | None = None,
 ) -> bytes:
     """Build a Repo FlatBuffer payload (without header)."""
     builder = flatbuffers.Builder(2048)
@@ -706,6 +835,9 @@ def build_repo_payload(
 
     # Build SnapshotInfo tables
     snap_offsets = [_build_snapshot_info(builder, s) for s in snapshots]
+
+    # Build Update tables
+    update_offsets = [_build_update(builder, u) for u in (updates or [])]
 
     # Branches vector
     RepoStartBranchesVector(builder, len(branch_offsets))
@@ -725,12 +857,18 @@ def build_repo_payload(
         builder.PrependUOffsetTRelative(off)
     snaps_vec = builder.EndVector()
 
-    # deleted_tags (required) — empty vector
-    RepoStartDeletedTagsVector(builder, 0)
+    # deleted_tags (required)
+    dt_list = sorted(deleted_tags or [])
+    dt_string_offsets = [builder.CreateString(t) for t in dt_list]
+    RepoStartDeletedTagsVector(builder, len(dt_string_offsets))
+    for off in reversed(dt_string_offsets):
+        builder.PrependUOffsetTRelative(off)
     deleted_tags_vec = builder.EndVector()
 
-    # latest_updates (required) — empty vector
-    RepoStartLatestUpdatesVector(builder, 0)
+    # latest_updates (required)
+    RepoStartLatestUpdatesVector(builder, len(update_offsets))
+    for off in reversed(update_offsets):
+        builder.PrependUOffsetTRelative(off)
     latest_updates_vec = builder.EndVector()
 
     # status (required) — Online
@@ -759,7 +897,11 @@ def build_repo(
     branches: dict[str, int],
     tags: dict[str, int],
     snapshots: list[SnapshotInfoData],
+    deleted_tags: list[str] | None = None,
+    updates: list[UpdateData] | None = None,
 ) -> bytes:
     """Build a complete repo file (header + FlatBuffer payload)."""
-    payload = build_repo_payload(spec_version, branches, tags, snapshots)
+    payload = build_repo_payload(
+        spec_version, branches, tags, snapshots, deleted_tags, updates
+    )
     return build_bytes(payload, FileType.REPO_INFO)
