@@ -446,34 +446,33 @@ class Repository:
             self._state = RepoState.from_repo_info(RepoInfo(storage=self._storage))
             self._snapshot_cache.clear()
 
-    def _apply_commit(
-        self,
-        branch: str,
-        snapshot_id: bytes,
-        parent_snapshot_id: bytes,
-        flushed_at: int,
-        message: str,
-    ) -> None:
+    def _apply_commit(self, result: object) -> None:
         """Apply a commit: update in-memory state and flush repo file.
 
-        Called by WritableSession.commit(). Not part of the public API.
+        Called by WritableSession.commit(). Accepts a CommitResult.
+        Not part of the public API.
         """
-        parent_idx = self._state.find_snapshot_index(parent_snapshot_id)
+        from icepyck.session import CommitResult
+
+        if not isinstance(result, CommitResult):
+            raise TypeError(f"Expected CommitResult, got {type(result)}")
+
+        parent_idx = self._state.find_snapshot_index(result.parent_snapshot_id)
         new_snap = SnapshotInfoData(
-            snapshot_id=snapshot_id,
+            snapshot_id=result.snapshot_id,
             parent_offset=parent_idx,
-            flushed_at=flushed_at,
-            message=message,
+            flushed_at=result.flushed_at,
+            message=result.message,
         )
         self._state.snapshots.append(new_snap)
-        self._state.branches[branch] = len(self._state.snapshots) - 1
+        self._state.branches[result.branch] = len(self._state.snapshots) - 1
         self._flush_repo(
             [
                 UpdateData(
                     kind="new_commit",
-                    branch=branch,
-                    snapshot_id=snapshot_id,
-                    updated_at=flushed_at,
+                    branch=result.branch,
+                    snapshot_id=result.snapshot_id,
+                    updated_at=result.flushed_at,
                 )
             ]
         )

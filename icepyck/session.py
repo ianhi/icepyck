@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from icepyck.crockford import encode as crockford_encode
@@ -30,6 +31,17 @@ if TYPE_CHECKING:
     from icepyck.repository import Repository
     from icepyck.snapshot import NodeInfo
     from icepyck.storage import Storage
+
+
+@dataclass(frozen=True)
+class CommitResult:
+    """Immutable record of a successful commit, consumed by Repository._apply_commit()."""
+
+    snapshot_id: bytes
+    parent_snapshot_id: bytes
+    branch: str
+    flushed_at: int
+    message: str
 
 
 class WritableSession:
@@ -269,16 +281,19 @@ class WritableSession:
         )
         self._storage.write(f"transactions/{crockford_encode(snapshot_id)}", txn_bytes)
 
-        # --- Step 5: Delegate repo file update to Repository ---
-        self._repo._apply_commit(
-            branch=self._branch,
+        # --- Step 5: Build commit result and apply via Repository ---
+        result = CommitResult(
             snapshot_id=snapshot_id,
             parent_snapshot_id=self._base_snapshot_id,
+            branch=self._branch,
             flushed_at=flushed_at,
             message=message,
         )
 
-        # Reset change tracking for potential further commits
+        # Apply atomically — if this fails, session state is untouched
+        self._repo._apply_commit(result)
+
+        # Reset change tracking for next commit (only after successful apply)
         self._base_snapshot_id = snapshot_id
         from icepyck.snapshot import SnapshotReader
 
