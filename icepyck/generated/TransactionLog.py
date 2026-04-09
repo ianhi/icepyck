@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class TransactionLog(object):
-    __slots__ = ['_tab']
+
+class TransactionLog:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class TransactionLog(object):
     def GetRootAsTransactionLog(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # TransactionLog
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -30,6 +33,7 @@ class TransactionLog(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -42,6 +46,7 @@ class TransactionLog(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -66,6 +71,7 @@ class TransactionLog(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -90,6 +96,7 @@ class TransactionLog(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -114,6 +121,7 @@ class TransactionLog(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -138,6 +146,7 @@ class TransactionLog(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -162,6 +171,7 @@ class TransactionLog(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -187,6 +197,7 @@ class TransactionLog(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.ArrayUpdatedChunks import ArrayUpdatedChunks
+
             obj = ArrayUpdatedChunks()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -212,6 +223,7 @@ class TransactionLog(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.MoveOperation import MoveOperation
+
             obj = MoveOperation()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -234,7 +246,10 @@ class TransactionLog(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # TransactionLog
@@ -256,128 +271,188 @@ class TransactionLog(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
         return o == 0
 
+
 def TransactionLogStart(builder):
     builder.StartObject(10)
+
 
 def Start(builder):
     TransactionLogStart(builder)
 
+
 def TransactionLogAddId(builder, id):
     builder.PrependStructSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(id), 0)
+
 
 def AddId(builder, id):
     TransactionLogAddId(builder, id)
 
+
 def TransactionLogAddNewGroups(builder, newGroups):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(newGroups), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(newGroups), 0
+    )
+
 
 def AddNewGroups(builder, newGroups):
     TransactionLogAddNewGroups(builder, newGroups)
 
+
 def TransactionLogStartNewGroupsVector(builder, numElems):
     return builder.StartVector(8, numElems, 1)
+
 
 def StartNewGroupsVector(builder, numElems):
     return TransactionLogStartNewGroupsVector(builder, numElems)
 
+
 def TransactionLogAddNewArrays(builder, newArrays):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(newArrays), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(newArrays), 0
+    )
+
 
 def AddNewArrays(builder, newArrays):
     TransactionLogAddNewArrays(builder, newArrays)
 
+
 def TransactionLogStartNewArraysVector(builder, numElems):
     return builder.StartVector(8, numElems, 1)
+
 
 def StartNewArraysVector(builder, numElems):
     return TransactionLogStartNewArraysVector(builder, numElems)
 
+
 def TransactionLogAddDeletedGroups(builder, deletedGroups):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(deletedGroups), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(deletedGroups), 0
+    )
+
 
 def AddDeletedGroups(builder, deletedGroups):
     TransactionLogAddDeletedGroups(builder, deletedGroups)
 
+
 def TransactionLogStartDeletedGroupsVector(builder, numElems):
     return builder.StartVector(8, numElems, 1)
+
 
 def StartDeletedGroupsVector(builder, numElems):
     return TransactionLogStartDeletedGroupsVector(builder, numElems)
 
+
 def TransactionLogAddDeletedArrays(builder, deletedArrays):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(deletedArrays), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(deletedArrays), 0
+    )
+
 
 def AddDeletedArrays(builder, deletedArrays):
     TransactionLogAddDeletedArrays(builder, deletedArrays)
 
+
 def TransactionLogStartDeletedArraysVector(builder, numElems):
     return builder.StartVector(8, numElems, 1)
+
 
 def StartDeletedArraysVector(builder, numElems):
     return TransactionLogStartDeletedArraysVector(builder, numElems)
 
+
 def TransactionLogAddUpdatedArrays(builder, updatedArrays):
-    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(updatedArrays), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        5, flatbuffers.number_types.UOffsetTFlags.py_type(updatedArrays), 0
+    )
+
 
 def AddUpdatedArrays(builder, updatedArrays):
     TransactionLogAddUpdatedArrays(builder, updatedArrays)
 
+
 def TransactionLogStartUpdatedArraysVector(builder, numElems):
     return builder.StartVector(8, numElems, 1)
+
 
 def StartUpdatedArraysVector(builder, numElems):
     return TransactionLogStartUpdatedArraysVector(builder, numElems)
 
+
 def TransactionLogAddUpdatedGroups(builder, updatedGroups):
-    builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(updatedGroups), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        6, flatbuffers.number_types.UOffsetTFlags.py_type(updatedGroups), 0
+    )
+
 
 def AddUpdatedGroups(builder, updatedGroups):
     TransactionLogAddUpdatedGroups(builder, updatedGroups)
 
+
 def TransactionLogStartUpdatedGroupsVector(builder, numElems):
     return builder.StartVector(8, numElems, 1)
+
 
 def StartUpdatedGroupsVector(builder, numElems):
     return TransactionLogStartUpdatedGroupsVector(builder, numElems)
 
+
 def TransactionLogAddUpdatedChunks(builder, updatedChunks):
-    builder.PrependUOffsetTRelativeSlot(7, flatbuffers.number_types.UOffsetTFlags.py_type(updatedChunks), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        7, flatbuffers.number_types.UOffsetTFlags.py_type(updatedChunks), 0
+    )
+
 
 def AddUpdatedChunks(builder, updatedChunks):
     TransactionLogAddUpdatedChunks(builder, updatedChunks)
 
+
 def TransactionLogStartUpdatedChunksVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartUpdatedChunksVector(builder, numElems):
     return TransactionLogStartUpdatedChunksVector(builder, numElems)
 
+
 def TransactionLogAddMovedNodes(builder, movedNodes):
-    builder.PrependUOffsetTRelativeSlot(8, flatbuffers.number_types.UOffsetTFlags.py_type(movedNodes), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        8, flatbuffers.number_types.UOffsetTFlags.py_type(movedNodes), 0
+    )
+
 
 def AddMovedNodes(builder, movedNodes):
     TransactionLogAddMovedNodes(builder, movedNodes)
 
+
 def TransactionLogStartMovedNodesVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartMovedNodesVector(builder, numElems):
     return TransactionLogStartMovedNodesVector(builder, numElems)
 
+
 def TransactionLogAddExtra(builder, extra):
-    builder.PrependUOffsetTRelativeSlot(9, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        9, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0
+    )
+
 
 def AddExtra(builder, extra):
     TransactionLogAddExtra(builder, extra)
 
+
 def TransactionLogStartExtraVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartExtraVector(builder, numElems):
     return TransactionLogStartExtraVector(builder, numElems)
 
+
 def TransactionLogEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return TransactionLogEnd(builder)

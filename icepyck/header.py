@@ -102,11 +102,7 @@ def build_bytes(
     """
     impl_bytes = implementation.encode("utf-8")[:24].ljust(24)
 
-    header = (
-        MAGIC
-        + impl_bytes
-        + bytes([spec_version, file_type, compression])
-    )
+    header = MAGIC + impl_bytes + bytes([spec_version, file_type, compression])
 
     if compression == Compression.ZSTD:
         cctx = zstandard.ZstdCompressor()

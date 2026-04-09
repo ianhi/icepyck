@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class Ref(object):
-    __slots__ = ['_tab']
+
+class Ref:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class Ref(object):
     def GetRootAsRef(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # Ref
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -35,29 +38,41 @@ class Ref(object):
     def SnapshotIndex(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
+            )
         return 0
+
 
 def RefStart(builder):
     builder.StartObject(2)
 
+
 def Start(builder):
     RefStart(builder)
 
+
 def RefAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
+    )
+
 
 def AddName(builder, name):
     RefAddName(builder, name)
 
+
 def RefAddSnapshotIndex(builder, snapshotIndex):
     builder.PrependUint32Slot(1, snapshotIndex, 0)
+
 
 def AddSnapshotIndex(builder, snapshotIndex):
     RefAddSnapshotIndex(builder, snapshotIndex)
 
+
 def RefEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return RefEnd(builder)

@@ -44,24 +44,26 @@ class TestIcechunkReadsIcepyckRepo:
 
         ws = pyck_repo.writable_session(branch="main")
         arr_data = np.arange(12, dtype="<f4").reshape(3, 4)
-        meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [3, 4],
-            "data_type": "float32",
-            "chunk_grid": {
-                "name": "regular",
-                "configuration": {"chunk_shape": [3, 4]},
-            },
-            "chunk_key_encoding": {
-                "name": "default",
-                "configuration": {"separator": "/"},
-            },
-            "fill_value": 0.0,
-            "codecs": [
-                {"name": "bytes", "configuration": {"endian": "little"}},
-            ],
-        }).encode()
+        meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [3, 4],
+                "data_type": "float32",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [3, 4]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                ],
+            }
+        ).encode()
         ws.set_metadata("/data", meta)
         ws.set_chunk("/data", (0, 0), arr_data.tobytes())
         ws.commit("Added 3x4 array")
@@ -86,24 +88,26 @@ class TestIcechunkReadsIcepyckRepo:
             ("floats", "float64", [1.5, 2.5, 3.5]),
         ]:
             arr = np.array(values, dtype=dtype)
-            meta = json.dumps({
-                "zarr_format": 3,
-                "node_type": "array",
-                "shape": [len(values)],
-                "data_type": dtype,
-                "chunk_grid": {
-                    "name": "regular",
-                    "configuration": {"chunk_shape": [len(values)]},
-                },
-                "chunk_key_encoding": {
-                    "name": "default",
-                    "configuration": {"separator": "/"},
-                },
-                "fill_value": 0,
-                "codecs": [
-                    {"name": "bytes", "configuration": {"endian": "little"}},
-                ],
-            }).encode()
+            meta = json.dumps(
+                {
+                    "zarr_format": 3,
+                    "node_type": "array",
+                    "shape": [len(values)],
+                    "data_type": dtype,
+                    "chunk_grid": {
+                        "name": "regular",
+                        "configuration": {"chunk_shape": [len(values)]},
+                    },
+                    "chunk_key_encoding": {
+                        "name": "default",
+                        "configuration": {"separator": "/"},
+                    },
+                    "fill_value": 0,
+                    "codecs": [
+                        {"name": "bytes", "configuration": {"endian": "little"}},
+                    ],
+                }
+            ).encode()
             ws.set_metadata(f"/{name}", meta)
             ws.set_chunk(f"/{name}", (0,), arr.tobytes())
 
@@ -125,24 +129,26 @@ class TestIcechunkReadsIcepyckRepo:
         ws = pyck_repo.writable_session(branch="main")
 
         # Commit 1
-        meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [3],
-            "data_type": "float32",
-            "chunk_grid": {
-                "name": "regular",
-                "configuration": {"chunk_shape": [3]},
-            },
-            "chunk_key_encoding": {
-                "name": "default",
-                "configuration": {"separator": "/"},
-            },
-            "fill_value": 0.0,
-            "codecs": [
-                {"name": "bytes", "configuration": {"endian": "little"}},
-            ],
-        }).encode()
+        meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [3],
+                "data_type": "float32",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [3]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                ],
+            }
+        ).encode()
         ws.set_metadata("/arr", meta)
         ws.set_chunk("/arr", (0,), np.array([1, 2, 3], dtype="<f4").tobytes())
         ws.commit("First commit")

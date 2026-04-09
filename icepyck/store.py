@@ -56,8 +56,7 @@ def _parse_key(key: str) -> tuple[str, str | tuple[int, ...]]:
             # Everything after must be integer indices
             tail = parts[i + 1 :]
             if all(
-                p.isdigit() or (p.startswith("-") and p[1:].isdigit())
-                for p in tail
+                p.isdigit() or (p.startswith("-") and p[1:].isdigit()) for p in tail
             ):
                 c_idx = i
                 break
@@ -103,18 +102,14 @@ def _iter_chunk_keys_from_metadata(user_data: bytes) -> list[str]:
     if not chunk_shape or len(chunk_shape) != len(shape):
         return []
 
-    n_chunks = [
-        math.ceil(s / cs) for s, cs in zip(shape, chunk_shape, strict=True)
-    ]
+    n_chunks = [math.ceil(s / cs) for s, cs in zip(shape, chunk_shape, strict=True)]
     keys: list[str] = []
     for coords in product(*(range(n) for n in n_chunks)):
         keys.append("/".join(str(c) for c in coords))
     return keys
 
 
-def _extents_contain(
-    extents: list[tuple[int, int]], coords: tuple[int, ...]
-) -> bool:
+def _extents_contain(extents: list[tuple[int, int]], coords: tuple[int, ...]) -> bool:
     """Check if chunk coords fall within ManifestRef extents.
 
     Each extent is (from_inclusive, to_exclusive) for one dimension.
@@ -124,9 +119,7 @@ def _extents_contain(
         return True
     if len(extents) != len(coords):
         return False
-    return all(
-        lo <= c < hi for (lo, hi), c in zip(extents, coords, strict=True)
-    )
+    return all(lo <= c < hi for (lo, hi), c in zip(extents, coords, strict=True))
 
 
 class IcechunkReadStore(Store):
@@ -235,9 +228,7 @@ class IcechunkReadStore(Store):
             if mref.manifest_id not in self._manifest_cache
         }
         if manifest_ids:
-            await asyncio.gather(
-                *(self._aget_manifest(mid) for mid in manifest_ids)
-            )
+            await asyncio.gather(*(self._aget_manifest(mid) for mid in manifest_ids))
 
     def _find_chunk_ref(
         self,
@@ -447,7 +438,7 @@ class IcechunkReadStore(Store):
             # prefix touches a chunk subtree; enumerate only the matching chunks.
             node_path, node = chunk_prefix
             zarr_prefix = "" if node_path == "/" else node_path.lstrip("/")
-            base = (f"{zarr_prefix}/c/" if zarr_prefix else "c/")
+            base = f"{zarr_prefix}/c/" if zarr_prefix else "c/"
             for idx_str in _iter_chunk_keys_from_metadata(node.user_data):  # type: ignore[arg-type]
                 key = f"{base}{idx_str}"
                 if key.startswith(prefix):
@@ -472,7 +463,7 @@ class IcechunkReadStore(Store):
                 full_key = f"{chunk_base}{idx_str}"
                 if not full_key.startswith(prefix):
                     continue
-                remainder = full_key[len(prefix):]
+                remainder = full_key[len(prefix) :]
                 entry = remainder.split("/")[0] + "/" if "/" in remainder else remainder
                 if entry and entry not in seen:
                     seen.add(entry)
@@ -488,9 +479,7 @@ class IcechunkReadStore(Store):
             return ""
         return ic_path.lstrip("/") + "/"
 
-    def _chunk_prefix_for(
-        self, prefix: str
-    ) -> tuple[str, NodeInfo] | None:
+    def _chunk_prefix_for(self, prefix: str) -> tuple[str, NodeInfo] | None:
         """Return *(node_path, node)* if *prefix* falls inside a chunk subtree.
 
         A chunk subtree is ``<array_zarr_prefix>c/``.  Returns *None* when the
@@ -536,7 +525,7 @@ class IcechunkReadStore(Store):
             meta_key = zarr_prefix + "zarr.json" if zarr_prefix else "zarr.json"
 
             if meta_key.startswith(prefix):
-                remainder = meta_key[len(prefix):]
+                remainder = meta_key[len(prefix) :]
                 entry = remainder.split("/")[0] + "/" if "/" in remainder else remainder
                 if entry and entry not in seen:
                     seen.add(entry)
@@ -546,7 +535,7 @@ class IcechunkReadStore(Store):
             if node.node_type == "array":
                 chunk_ns_key = zarr_prefix + "c/"  # e.g. "group1/arr/c/"
                 if chunk_ns_key.startswith(prefix) or prefix.startswith(chunk_ns_key):
-                    remainder = chunk_ns_key[len(prefix):]
+                    remainder = chunk_ns_key[len(prefix) :]
                     entry = remainder.split("/")[0] + "/" if remainder else ""
                     if entry and entry not in seen:
                         seen.add(entry)
@@ -677,7 +666,7 @@ class IcechunkStore(Store):
         async for key in self.list():
             if not key.startswith(prefix):
                 continue
-            remainder = key[len(prefix):]
+            remainder = key[len(prefix) :]
             entry = remainder.split("/")[0] + "/" if "/" in remainder else remainder
             if entry and entry not in seen:
                 seen.add(entry)

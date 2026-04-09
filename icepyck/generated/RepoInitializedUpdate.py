@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class RepoInitializedUpdate(object):
-    __slots__ = ['_tab']
+
+class RepoInitializedUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,18 +22,23 @@ class RepoInitializedUpdate(object):
     def GetRootAsRepoInitializedUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # RepoInitializedUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
+
 def RepoInitializedUpdateStart(builder):
     builder.StartObject(0)
+
 
 def Start(builder):
     RepoInitializedUpdateStart(builder)
 
+
 def RepoInitializedUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return RepoInitializedUpdateEnd(builder)

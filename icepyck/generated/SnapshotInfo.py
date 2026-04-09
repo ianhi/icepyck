@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class SnapshotInfo(object):
-    __slots__ = ['_tab']
+
+class SnapshotInfo:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class SnapshotInfo(object):
     def GetRootAsSnapshotInfo(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # SnapshotInfo
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -30,6 +33,7 @@ class SnapshotInfo(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -46,7 +50,9 @@ class SnapshotInfo(object):
     def FlushedAt(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # SnapshotInfo
@@ -64,6 +70,7 @@ class SnapshotInfo(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.MetadataItem import MetadataItem
+
             obj = MetadataItem()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -81,50 +88,70 @@ class SnapshotInfo(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         return o == 0
 
+
 def SnapshotInfoStart(builder):
     builder.StartObject(5)
+
 
 def Start(builder):
     SnapshotInfoStart(builder)
 
+
 def SnapshotInfoAddId(builder, id):
     builder.PrependStructSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(id), 0)
+
 
 def AddId(builder, id):
     SnapshotInfoAddId(builder, id)
 
+
 def SnapshotInfoAddParentOffset(builder, parentOffset):
     builder.PrependInt32Slot(1, parentOffset, 0)
+
 
 def AddParentOffset(builder, parentOffset):
     SnapshotInfoAddParentOffset(builder, parentOffset)
 
+
 def SnapshotInfoAddFlushedAt(builder, flushedAt):
     builder.PrependUint64Slot(2, flushedAt, 0)
+
 
 def AddFlushedAt(builder, flushedAt):
     SnapshotInfoAddFlushedAt(builder, flushedAt)
 
+
 def SnapshotInfoAddMessage(builder, message):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(message), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(message), 0
+    )
+
 
 def AddMessage(builder, message):
     SnapshotInfoAddMessage(builder, message)
 
+
 def SnapshotInfoAddMetadata(builder, metadata):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(metadata), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(metadata), 0
+    )
+
 
 def AddMetadata(builder, metadata):
     SnapshotInfoAddMetadata(builder, metadata)
 
+
 def SnapshotInfoStartMetadataVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartMetadataVector(builder, numElems):
     return SnapshotInfoStartMetadataVector(builder, numElems)
 
+
 def SnapshotInfoEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return SnapshotInfoEnd(builder)

@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class RepoStatusChangedUpdate(object):
-    __slots__ = ['_tab']
+
+class RepoStatusChangedUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class RepoStatusChangedUpdate(object):
     def GetRootAsRepoStatusChangedUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # RepoStatusChangedUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -30,25 +33,34 @@ class RepoStatusChangedUpdate(object):
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
             from icepyck.generated.RepoStatus import RepoStatus
+
             obj = RepoStatus()
             obj.Init(self._tab.Bytes, x)
             return obj
         return None
 
+
 def RepoStatusChangedUpdateStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     RepoStatusChangedUpdateStart(builder)
 
+
 def RepoStatusChangedUpdateAddStatus(builder, status):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(status), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(status), 0
+    )
+
 
 def AddStatus(builder, status):
     RepoStatusChangedUpdateAddStatus(builder, status)
 
+
 def RepoStatusChangedUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return RepoStatusChangedUpdateEnd(builder)

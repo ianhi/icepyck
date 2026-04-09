@@ -7,13 +7,15 @@
 
 """Create test icechunk repositories for spec conformance testing."""
 
-import icechunk
-import zarr
-import numpy as np
 import shutil
 from pathlib import Path
 
+import icechunk
+import numpy as np
+import zarr
+
 TEST_DIR = Path(__file__).parent / "test-repos"
+
 
 def create_basic_repo():
     """A simple repo with one group and two arrays."""

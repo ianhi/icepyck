@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class MoveOperation(object):
-    __slots__ = ['_tab']
+
+class MoveOperation:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class MoveOperation(object):
     def GetRootAsMoveOperation(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # MoveOperation
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -44,6 +47,7 @@ class MoveOperation(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -56,38 +60,56 @@ class MoveOperation(object):
             return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
         return 0
 
+
 def MoveOperationStart(builder):
     builder.StartObject(4)
+
 
 def Start(builder):
     MoveOperationStart(builder)
 
+
 def MoveOperationAddFrom(builder, from_):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(from_), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(from_), 0
+    )
+
 
 def AddFrom(builder, from_):
     MoveOperationAddFrom(builder, from_)
 
+
 def MoveOperationAddTo(builder, to):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(to), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(to), 0
+    )
+
 
 def AddTo(builder, to):
     MoveOperationAddTo(builder, to)
 
+
 def MoveOperationAddNodeId(builder, nodeId):
-    builder.PrependStructSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(nodeId), 0)
+    builder.PrependStructSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(nodeId), 0
+    )
+
 
 def AddNodeId(builder, nodeId):
     MoveOperationAddNodeId(builder, nodeId)
 
+
 def MoveOperationAddNodeType(builder, nodeType):
     builder.PrependUint8Slot(3, nodeType, 0)
+
 
 def AddNodeType(builder, nodeType):
     MoveOperationAddNodeType(builder, nodeType)
 
+
 def MoveOperationEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return MoveOperationEnd(builder)

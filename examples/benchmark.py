@@ -20,12 +20,12 @@ import time
 import warnings
 from pathlib import Path
 
+import icechunk
 import numpy as np
 import xarray as xr
 from rich.console import Console
 from rich.table import Table
 
-import icechunk
 import icepyck
 
 warnings.filterwarnings("ignore")
@@ -51,8 +51,10 @@ def bench(label: str, fn, n: int = 3) -> float:
 
 # ── Open repo ──────────────────────────────────────────────
 
+
 def pyck_open():
     return icepyck.open(REPO_PATH)
+
 
 def ic_open():
     storage = icechunk.local_filesystem_storage(str(REPO_PATH))
@@ -65,8 +67,10 @@ pyck_repo = icepyck.open(REPO_PATH)
 ic_storage = icechunk.local_filesystem_storage(str(REPO_PATH))
 ic_repo = icechunk.Repository.open(ic_storage)
 
+
 def pyck_session():
     return pyck_repo.readonly_session(branch="main")
+
 
 def ic_session():
     return ic_repo.readonly_session(branch="main")
@@ -77,10 +81,12 @@ def ic_session():
 pyck_sess = pyck_repo.readonly_session(branch="main")
 ic_sess = ic_repo.readonly_session(branch="main")
 
+
 def pyck_open_ds():
     return xr.open_dataset(
         pyck_sess.store, engine="zarr", chunks=None, consolidated=False
     )
+
 
 def ic_open_ds():
     return xr.open_dataset(
@@ -90,16 +96,16 @@ def ic_open_ds():
 
 # ── Read full array (cold - new dataset each time) ────────
 
+
 def pyck_read_air():
     ds = xr.open_dataset(
         pyck_sess.store, engine="zarr", chunks=None, consolidated=False
     )
     return ds["air"].values
 
+
 def ic_read_air():
-    ds = xr.open_dataset(
-        ic_sess.store, engine="zarr", chunks=None, consolidated=False
-    )
+    ds = xr.open_dataset(ic_sess.store, engine="zarr", chunks=None, consolidated=False)
     return ds["air"].values
 
 
@@ -107,9 +113,11 @@ def ic_read_air():
 
 import zarr
 
+
 def pyck_read_chunk():
     root = zarr.open_group(store=pyck_sess.store, mode="r")
     return np.array(root["air"][0:730, 0:13, 0:27])
+
 
 def ic_read_chunk():
     root = zarr.open_group(store=ic_sess.store, mode="r")
@@ -138,8 +146,8 @@ for label, pyck_fn, ic_fn in benchmarks:
     ratio = t_pyck / t_ic if t_ic > 0 else float("inf")
     table.add_row(
         label,
-        f"{t_pyck*1000:.1f} ms",
-        f"{t_ic*1000:.1f} ms",
+        f"{t_pyck * 1000:.1f} ms",
+        f"{t_ic * 1000:.1f} ms",
         f"{ratio:.1f}x",
     )
 

@@ -39,9 +39,15 @@ build-backend = "hatchling.build"
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+extend-exclude = ["icepyck/generated"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "SIM", "TCH"]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]  # line-too-long — handled by formatter where possible
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402"]
+"examples/*.py" = ["E402"]
 
 [tool.pytest.ini_options]
 markers = [

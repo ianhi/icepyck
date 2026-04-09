@@ -40,6 +40,7 @@ REPO_CONFIGS = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _open_icechunk(repo_path: Path):
     """Open a repo via icechunk and return (icechunk_repo, zarr_root)."""
     storage = icechunk.local_filesystem_storage(str(repo_path))
@@ -129,6 +130,7 @@ def _get_chunk_shape(meta: dict) -> tuple[int, ...]:
 # Parametrized fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(
     params=list(REPO_CONFIGS.keys()),
     ids=list(REPO_CONFIGS.keys()),
@@ -159,6 +161,7 @@ def ic_repo(repo_path):
 # Test: branches and tags match
 # ---------------------------------------------------------------------------
 
+
 class TestBranchesAndTags:
     def test_branches_match(self, pyck_repo, ic_repo):
         pyck_branches = sorted(pyck_repo.list_branches())
@@ -175,6 +178,7 @@ class TestBranchesAndTags:
 # Test: snapshot IDs match
 # ---------------------------------------------------------------------------
 
+
 class TestSnapshotIds:
     def test_branch_snapshot_ids_match(self, pyck_repo, ic_repo):
         for branch in ic_repo.list_branches():
@@ -186,8 +190,7 @@ class TestSnapshotIds:
             pyck_snap_id = crockford_encode(pyck_snap_bytes)
 
             assert pyck_snap_id == ref_snap_id, (
-                f"Branch {branch!r}: icepyck={pyck_snap_id}, "
-                f"icechunk={ref_snap_id}"
+                f"Branch {branch!r}: icepyck={pyck_snap_id}, icechunk={ref_snap_id}"
             )
 
     def test_tag_snapshot_ids_match(self, pyck_repo, ic_repo):
@@ -207,25 +210,20 @@ class TestSnapshotIds:
 # Test: node paths and types match
 # ---------------------------------------------------------------------------
 
+
 class TestNodePaths:
     def test_node_paths_match(self, pyck_repo, ic_repo):
         # icepyck nodes
         pyck_nodes = pyck_repo.list_nodes("main")
         # Filter out root node since zarr doesn't list it as a member
-        pyck_items = sorted(
-            (n.path, n.node_type)
-            for n in pyck_nodes
-            if n.path != "/"
-        )
+        pyck_items = sorted((n.path, n.node_type) for n in pyck_nodes if n.path != "/")
 
         # zarr/icechunk hierarchy walk
         root = _zarr_root(ic_repo, "main")
         ref_items = sorted(_walk_zarr(root))
 
         assert pyck_items == ref_items, (
-            f"Node mismatch:\n"
-            f"  icepyck: {pyck_items}\n"
-            f"  icechunk: {ref_items}"
+            f"Node mismatch:\n  icepyck: {pyck_items}\n  icechunk: {ref_items}"
         )
 
 
@@ -233,9 +231,10 @@ class TestNodePaths:
 # Test: array metadata matches
 # ---------------------------------------------------------------------------
 
+
 class TestArrayMetadata:
     def test_zarr_metadata_matches(self, pyck_repo, ic_repo, repo_name):
-        root = _zarr_root(ic_repo, "main")
+        _zarr_root(ic_repo, "main")
         array_paths = REPO_CONFIGS[repo_name]
 
         for array_path in array_paths:
@@ -251,16 +250,13 @@ class TestArrayMetadata:
 
             # Compare key metadata fields
             pyck_shape = tuple(pyck_meta["shape"])
-            pyck_dtype = pyck_meta["data_type"]
             pyck_chunks = _get_chunk_shape(pyck_meta)
 
             assert pyck_shape == ref_arr.shape, (
-                f"{array_path}: shape mismatch "
-                f"{pyck_shape} vs {ref_arr.shape}"
+                f"{array_path}: shape mismatch {pyck_shape} vs {ref_arr.shape}"
             )
             assert pyck_chunks == ref_arr.chunks, (
-                f"{array_path}: chunk shape mismatch "
-                f"{pyck_chunks} vs {ref_arr.chunks}"
+                f"{array_path}: chunk shape mismatch {pyck_chunks} vs {ref_arr.chunks}"
             )
 
             # Validate zarr_format
@@ -271,6 +267,7 @@ class TestArrayMetadata:
 # Test: chunk data matches (most important)
 # ---------------------------------------------------------------------------
 
+
 class TestChunkData:
     def test_array_data_matches(self, pyck_repo, ic_repo, repo_name):
         """Compare decoded chunk data from icepyck against zarr/icechunk."""
@@ -279,9 +276,7 @@ class TestChunkData:
         for array_path in array_paths:
             zarr_path = array_path.lstrip("/")
             session = ic_repo.readonly_session(branch="main")
-            ref_arr = zarr.open_array(
-                store=session.store, path=zarr_path, mode="r"
-            )
+            ref_arr = zarr.open_array(store=session.store, path=zarr_path, mode="r")
             # Use [()] for scalar (0-d) arrays, [:] for everything else
             if ref_arr.shape == ():
                 ref_data = np.array(ref_arr[()])
@@ -296,13 +291,12 @@ class TestChunkData:
 
             if shape == ():
                 # Scalar array: single chunk at index ()
-                assert () in chunks_dict, (
-                    f"{array_path}: scalar array missing chunk ()"
-                )
+                assert () in chunks_dict, f"{array_path}: scalar array missing chunk ()"
                 decoded = _decode_chunk(chunks_dict[()], meta)
                 assert len(decoded) == 1
                 np.testing.assert_array_equal(
-                    decoded[0], ref_data,
+                    decoded[0],
+                    ref_data,
                     err_msg=f"{array_path}: scalar value mismatch",
                 )
                 continue
@@ -311,12 +305,7 @@ class TestChunkData:
             pyck_full = np.empty(shape, dtype=ref_data.dtype)
             fill_value = meta.get("fill_value", 0)
 
-            # Compute number of chunks per dimension
             ndim = len(shape)
-            n_chunks_per_dim = tuple(
-                (shape[d] + chunk_shape[d] - 1) // chunk_shape[d]
-                for d in range(ndim)
-            )
 
             # Fill with fill_value first
             pyck_full[:] = fill_value
@@ -337,13 +326,11 @@ class TestChunkData:
                     chunk_rows = r_end - r_start
                     chunk_cols = c_end - c_start
                     decoded_2d = decoded.reshape(chunk_shape)
-                    pyck_full[r_start:r_end, c_start:c_end] = (
-                        decoded_2d[:chunk_rows, :chunk_cols]
-                    )
+                    pyck_full[r_start:r_end, c_start:c_end] = decoded_2d[
+                        :chunk_rows, :chunk_cols
+                    ]
                 else:
-                    pytest.skip(
-                        f"Chunk assembly for {ndim}D arrays not implemented"
-                    )
+                    pytest.skip(f"Chunk assembly for {ndim}D arrays not implemented")
 
             np.testing.assert_array_equal(
                 pyck_full,
@@ -358,8 +345,6 @@ class TestChunkData:
         for array_path in array_paths:
             meta = pyck_repo.get_array_metadata("main", array_path)
             shape = tuple(meta["shape"])
-            chunk_shape = _get_chunk_shape(meta)
-
             if shape == ():
                 # Scalar: expect exactly 1 chunk
                 chunks = pyck_repo.read_all_chunks("main", array_path)
@@ -370,6 +355,4 @@ class TestChunkData:
 
             # Every chunk must produce non-empty bytes
             for idx, data in chunks.items():
-                assert len(data) > 0, (
-                    f"{array_path} chunk {idx}: got empty bytes"
-                )
+                assert len(data) > 0, f"{array_path} chunk {idx}: got empty bytes"

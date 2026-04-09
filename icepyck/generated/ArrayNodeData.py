@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ArrayNodeData(object):
-    __slots__ = ['_tab']
+
+class ArrayNodeData:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class ArrayNodeData(object):
     def GetRootAsArrayNodeData(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # ArrayNodeData
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -31,6 +34,7 @@ class ArrayNodeData(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 16
             from icepyck.generated.DimensionShape import DimensionShape
+
             obj = DimensionShape()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -56,6 +60,7 @@ class ArrayNodeData(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.DimensionName import DimensionName
+
             obj = DimensionName()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -81,6 +86,7 @@ class ArrayNodeData(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.ManifestRef import ManifestRef
+
             obj = ManifestRef()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -106,6 +112,7 @@ class ArrayNodeData(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.DimensionShapeV2 import DimensionShapeV2
+
             obj = DimensionShapeV2()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -123,62 +130,90 @@ class ArrayNodeData(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         return o == 0
 
+
 def ArrayNodeDataStart(builder):
     builder.StartObject(4)
+
 
 def Start(builder):
     ArrayNodeDataStart(builder)
 
+
 def ArrayNodeDataAddShape(builder, shape):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(shape), 0
+    )
+
 
 def AddShape(builder, shape):
     ArrayNodeDataAddShape(builder, shape)
 
+
 def ArrayNodeDataStartShapeVector(builder, numElems):
     return builder.StartVector(16, numElems, 8)
+
 
 def StartShapeVector(builder, numElems):
     return ArrayNodeDataStartShapeVector(builder, numElems)
 
+
 def ArrayNodeDataAddDimensionNames(builder, dimensionNames):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(dimensionNames), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(dimensionNames), 0
+    )
+
 
 def AddDimensionNames(builder, dimensionNames):
     ArrayNodeDataAddDimensionNames(builder, dimensionNames)
 
+
 def ArrayNodeDataStartDimensionNamesVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartDimensionNamesVector(builder, numElems):
     return ArrayNodeDataStartDimensionNamesVector(builder, numElems)
 
+
 def ArrayNodeDataAddManifests(builder, manifests):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(manifests), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(manifests), 0
+    )
+
 
 def AddManifests(builder, manifests):
     ArrayNodeDataAddManifests(builder, manifests)
 
+
 def ArrayNodeDataStartManifestsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartManifestsVector(builder, numElems):
     return ArrayNodeDataStartManifestsVector(builder, numElems)
 
+
 def ArrayNodeDataAddShapeV2(builder, shapeV2):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(shapeV2), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(shapeV2), 0
+    )
+
 
 def AddShapeV2(builder, shapeV2):
     ArrayNodeDataAddShapeV2(builder, shapeV2)
 
+
 def ArrayNodeDataStartShapeV2Vector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartShapeV2Vector(builder, numElems):
     return ArrayNodeDataStartShapeV2Vector(builder, numElems)
 
+
 def ArrayNodeDataEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ArrayNodeDataEnd(builder)

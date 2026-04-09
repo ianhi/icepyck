@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ChunkRef(object):
-    __slots__ = ['_tab']
+
+class ChunkRef:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class ChunkRef(object):
     def GetRootAsChunkRef(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # ChunkRef
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -29,7 +32,10 @@ class ChunkRef(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # ChunkRef
@@ -56,7 +62,10 @@ class ChunkRef(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # ChunkRef
@@ -82,14 +91,18 @@ class ChunkRef(object):
     def Offset(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # ChunkRef
     def Length(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # ChunkRef
@@ -98,6 +111,7 @@ class ChunkRef(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -121,7 +135,9 @@ class ChunkRef(object):
     def ChecksumLastModified(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
+            )
         return 0
 
     # ChunkRef
@@ -129,7 +145,10 @@ class ChunkRef(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(20))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # ChunkRef
@@ -156,7 +175,10 @@ class ChunkRef(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # ChunkRef
@@ -178,98 +200,144 @@ class ChunkRef(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
         return o == 0
 
+
 def ChunkRefStart(builder):
     builder.StartObject(10)
+
 
 def Start(builder):
     ChunkRefStart(builder)
 
+
 def ChunkRefAddIndex(builder, index):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(index), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(index), 0
+    )
+
 
 def AddIndex(builder, index):
     ChunkRefAddIndex(builder, index)
 
+
 def ChunkRefStartIndexVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartIndexVector(builder, numElems):
     return ChunkRefStartIndexVector(builder, numElems)
 
+
 def ChunkRefAddInline(builder, inline):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(inline), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(inline), 0
+    )
+
 
 def AddInline(builder, inline):
     ChunkRefAddInline(builder, inline)
 
+
 def ChunkRefStartInlineVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartInlineVector(builder, numElems):
     return ChunkRefStartInlineVector(builder, numElems)
 
+
 def ChunkRefAddOffset(builder, offset):
     builder.PrependUint64Slot(2, offset, 0)
+
 
 def AddOffset(builder, offset):
     ChunkRefAddOffset(builder, offset)
 
+
 def ChunkRefAddLength(builder, length):
     builder.PrependUint64Slot(3, length, 0)
+
 
 def AddLength(builder, length):
     ChunkRefAddLength(builder, length)
 
+
 def ChunkRefAddChunkId(builder, chunkId):
-    builder.PrependStructSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(chunkId), 0)
+    builder.PrependStructSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(chunkId), 0
+    )
+
 
 def AddChunkId(builder, chunkId):
     ChunkRefAddChunkId(builder, chunkId)
 
+
 def ChunkRefAddLocation(builder, location):
-    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(location), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        5, flatbuffers.number_types.UOffsetTFlags.py_type(location), 0
+    )
+
 
 def AddLocation(builder, location):
     ChunkRefAddLocation(builder, location)
 
+
 def ChunkRefAddChecksumEtag(builder, checksumEtag):
-    builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(checksumEtag), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        6, flatbuffers.number_types.UOffsetTFlags.py_type(checksumEtag), 0
+    )
+
 
 def AddChecksumEtag(builder, checksumEtag):
     ChunkRefAddChecksumEtag(builder, checksumEtag)
 
+
 def ChunkRefAddChecksumLastModified(builder, checksumLastModified):
     builder.PrependUint32Slot(7, checksumLastModified, 0)
+
 
 def AddChecksumLastModified(builder, checksumLastModified):
     ChunkRefAddChecksumLastModified(builder, checksumLastModified)
 
+
 def ChunkRefAddCompressedLocation(builder, compressedLocation):
-    builder.PrependUOffsetTRelativeSlot(8, flatbuffers.number_types.UOffsetTFlags.py_type(compressedLocation), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        8, flatbuffers.number_types.UOffsetTFlags.py_type(compressedLocation), 0
+    )
+
 
 def AddCompressedLocation(builder, compressedLocation):
     ChunkRefAddCompressedLocation(builder, compressedLocation)
 
+
 def ChunkRefStartCompressedLocationVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartCompressedLocationVector(builder, numElems):
     return ChunkRefStartCompressedLocationVector(builder, numElems)
 
+
 def ChunkRefAddExtra(builder, extra):
-    builder.PrependUOffsetTRelativeSlot(9, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        9, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0
+    )
+
 
 def AddExtra(builder, extra):
     ChunkRefAddExtra(builder, extra)
 
+
 def ChunkRefStartExtraVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartExtraVector(builder, numElems):
     return ChunkRefStartExtraVector(builder, numElems)
 
+
 def ChunkRefEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ChunkRefEnd(builder)

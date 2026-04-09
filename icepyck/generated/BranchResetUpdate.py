@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class BranchResetUpdate(object):
-    __slots__ = ['_tab']
+
+class BranchResetUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class BranchResetUpdate(object):
     def GetRootAsBranchResetUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # BranchResetUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -37,31 +40,44 @@ class BranchResetUpdate(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
         return None
 
+
 def BranchResetUpdateStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     BranchResetUpdateStart(builder)
 
+
 def BranchResetUpdateAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
+    )
+
 
 def AddName(builder, name):
     BranchResetUpdateAddName(builder, name)
 
+
 def BranchResetUpdateAddPreviousSnapId(builder, previousSnapId):
-    builder.PrependStructSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(previousSnapId), 0)
+    builder.PrependStructSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(previousSnapId), 0
+    )
+
 
 def AddPreviousSnapId(builder, previousSnapId):
     BranchResetUpdateAddPreviousSnapId(builder, previousSnapId)
 
+
 def BranchResetUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return BranchResetUpdateEnd(builder)

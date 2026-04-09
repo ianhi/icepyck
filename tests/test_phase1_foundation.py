@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 from icepyck.crockford import decode, encode
@@ -45,9 +44,7 @@ class TestStorageWrite:
 class TestHeaderBuild:
     def test_roundtrip_no_compression(self) -> None:
         payload = b"test payload data"
-        raw = build_bytes(
-            payload, FileType.SNAPSHOT, compression=Compression.NONE
-        )
+        raw = build_bytes(payload, FileType.SNAPSHOT, compression=Compression.NONE)
         header, decoded = parse_bytes(raw)
         assert header.file_type == FileType.SNAPSHOT
         assert header.compression == Compression.NONE
@@ -57,9 +54,7 @@ class TestHeaderBuild:
 
     def test_roundtrip_zstd(self) -> None:
         payload = b"test payload data" * 100
-        raw = build_bytes(
-            payload, FileType.MANIFEST, compression=Compression.ZSTD
-        )
+        raw = build_bytes(payload, FileType.MANIFEST, compression=Compression.ZSTD)
         header, decoded = parse_bytes(raw)
         assert header.file_type == FileType.MANIFEST
         assert header.compression == Compression.ZSTD

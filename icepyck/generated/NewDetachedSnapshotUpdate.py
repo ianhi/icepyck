@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class NewDetachedSnapshotUpdate(object):
-    __slots__ = ['_tab']
+
+class NewDetachedSnapshotUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class NewDetachedSnapshotUpdate(object):
     def GetRootAsNewDetachedSnapshotUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # NewDetachedSnapshotUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -30,25 +33,34 @@ class NewDetachedSnapshotUpdate(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
         return None
 
+
 def NewDetachedSnapshotUpdateStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     NewDetachedSnapshotUpdateStart(builder)
 
+
 def NewDetachedSnapshotUpdateAddNewSnapId(builder, newSnapId):
-    builder.PrependStructSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(newSnapId), 0)
+    builder.PrependStructSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(newSnapId), 0
+    )
+
 
 def AddNewSnapId(builder, newSnapId):
     NewDetachedSnapshotUpdateAddNewSnapId(builder, newSnapId)
 
+
 def NewDetachedSnapshotUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return NewDetachedSnapshotUpdateEnd(builder)

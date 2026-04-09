@@ -34,16 +34,24 @@ class TestZarrWriteThenRead:
 
         # Write a 1D array
         data = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5], dtype="<f8")
-        meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [6],
-            "data_type": "float64",
-            "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [6]}},
-            "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
-            "fill_value": 0.0,
-            "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
-        }).encode()
+        meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [6],
+                "data_type": "float64",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [6]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
+            }
+        ).encode()
         ws.set_metadata("/temps", meta)
         ws.set_chunk("/temps", (0,), data.tobytes())
         ws.commit("Added temps")
@@ -62,16 +70,24 @@ class TestZarrWriteThenRead:
 
         # Create a 2D array
         data = np.arange(20, dtype="<f4").reshape(4, 5)
-        meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [4, 5],
-            "data_type": "float32",
-            "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [4, 5]}},
-            "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
-            "fill_value": 0.0,
-            "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
-        }).encode()
+        meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [4, 5],
+                "data_type": "float32",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [4, 5]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
+            }
+        ).encode()
         ws.set_metadata("/grid", meta)
         ws.set_chunk("/grid", (0, 0), data.tobytes())
         ws.commit("Added 4x5 grid")
@@ -97,13 +113,29 @@ class TestZarrWriteThenRead:
 
         # Write new data
         ws = repo.writable_session(branch="main")
-        ws.set_metadata("/extra", json.dumps({
-            "zarr_format": 3, "node_type": "array",
-            "shape": [2], "data_type": "int32",
-            "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [2]}},
-            "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
-            "fill_value": 0, "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
-        }).encode())
+        ws.set_metadata(
+            "/extra",
+            json.dumps(
+                {
+                    "zarr_format": 3,
+                    "node_type": "array",
+                    "shape": [2],
+                    "data_type": "int32",
+                    "chunk_grid": {
+                        "name": "regular",
+                        "configuration": {"chunk_shape": [2]},
+                    },
+                    "chunk_key_encoding": {
+                        "name": "default",
+                        "configuration": {"separator": "/"},
+                    },
+                    "fill_value": 0,
+                    "codecs": [
+                        {"name": "bytes", "configuration": {"endian": "little"}}
+                    ],
+                }
+            ).encode(),
+        )
         ws.set_chunk("/extra", (0,), np.array([42, 43], dtype="<i4").tobytes())
         ws.commit("Added extra")
 
@@ -130,16 +162,24 @@ class TestMultiChunkArray:
         ws = repo.writable_session(branch="main")
 
         # Array shape [8] with chunk_shape [4] → 2 chunks
-        meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [8],
-            "data_type": "float64",
-            "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [4]}},
-            "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
-            "fill_value": 0.0,
-            "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
-        }).encode()
+        meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [8],
+                "data_type": "float64",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [4]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
+            }
+        ).encode()
         ws.set_metadata("/big", meta)
 
         c0 = np.array([1.0, 2.0, 3.0, 4.0], dtype="<f8")
@@ -150,6 +190,8 @@ class TestMultiChunkArray:
 
         # Read back
         repo2 = icepyck.open(repo_path)
-        root = zarr.open_group(store=repo2.readonly_session(branch="main").store, mode="r")
+        root = zarr.open_group(
+            store=repo2.readonly_session(branch="main").store, mode="r"
+        )
         result = root["big"][:]
         np.testing.assert_array_equal(result, np.concatenate([c0, c1]))

@@ -1,10 +1,10 @@
 """Tests for RepoInfo: branch/tag listing and snapshot ID resolution."""
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from icepyck.repo import RepoInfo
-from icepyck.crockford import encode as crockford_encode
 
 BASIC_REPO = Path(__file__).parent.parent / "test-repos" / "basic"
 

@@ -110,10 +110,7 @@ class WritableSession:
         if n_pending:
             changes.append(f"{n_pending} pending chunks")
         status = ", ".join(changes) if changes else "clean"
-        return (
-            f"WritableSession(branch={self._branch!r}, "
-            f"base={sid!r}, {status})"
-        )
+        return f"WritableSession(branch={self._branch!r}, base={sid!r}, {status})"
 
     @property
     def store(self) -> object:
@@ -218,15 +215,16 @@ class WritableSession:
             extents = _compute_extents(merged_refs)
             mref = ManifestRefData(manifest_id=manifest_id, extents=extents)
             new_manifests[array_path] = (
-                manifest_id, mref, len(manifest_bytes), len(merged_refs)
+                manifest_id,
+                mref,
+                len(manifest_bytes),
+                len(merged_refs),
             )
 
         # --- Step 3: Build the new snapshot ---
         snapshot_nodes = self._build_snapshot_nodes(new_manifests)
         manifest_files = [
-            ManifestFileData(
-                manifest_id=mid, size_bytes=sz, num_chunk_refs=nrefs
-            )
+            ManifestFileData(manifest_id=mid, size_bytes=sz, num_chunk_refs=nrefs)
             for mid, _, sz, nrefs in new_manifests.values()
         ]
         # Also carry forward manifest files from base nodes that weren't replaced
@@ -250,7 +248,7 @@ class WritableSession:
         updated_array_ids = []
         updated_chunks_data = []
 
-        for path, pnode in self._new_nodes.items():
+        for _path, pnode in self._new_nodes.items():
             if pnode.node_type == "array":
                 new_array_ids.append(pnode.node_id)
             else:
@@ -277,16 +275,12 @@ class WritableSession:
             updated_arrays=updated_array_ids,
             updated_chunks=updated_chunks_data,
         )
-        self._storage.write(
-            f"transactions/{crockford_encode(snapshot_id)}", txn_bytes
-        )
+        self._storage.write(f"transactions/{crockford_encode(snapshot_id)}", txn_bytes)
 
         # --- Step 5: Update repo file ---
         parent_idx = self._find_snapshot_index(self._base_snapshot_id)
         new_snap_idx = len(self._repo_snapshots)
-        self._repo_snapshots.append(
-            (snapshot_id, parent_idx, flushed_at, message)
-        )
+        self._repo_snapshots.append((snapshot_id, parent_idx, flushed_at, message))
         self._repo_branches[self._branch] = new_snap_idx
 
         repo_bytes = build_repo(

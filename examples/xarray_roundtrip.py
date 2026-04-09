@@ -23,11 +23,11 @@ reference icechunk implementation.
 import shutil
 from pathlib import Path
 
+import icechunk
 import numpy as np
 import xarray as xr
 import zarr
 
-import icechunk
 import icepyck
 
 REPO_PATH = Path(__file__).resolve().parent.parent / "test-repos" / "xarray-air-temp"

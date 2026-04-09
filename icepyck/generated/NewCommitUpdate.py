@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class NewCommitUpdate(object):
-    __slots__ = ['_tab']
+
+class NewCommitUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class NewCommitUpdate(object):
     def GetRootAsNewCommitUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # NewCommitUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -37,31 +40,44 @@ class NewCommitUpdate(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
         return None
 
+
 def NewCommitUpdateStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     NewCommitUpdateStart(builder)
 
+
 def NewCommitUpdateAddBranch(builder, branch):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(branch), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(branch), 0
+    )
+
 
 def AddBranch(builder, branch):
     NewCommitUpdateAddBranch(builder, branch)
 
+
 def NewCommitUpdateAddNewSnapId(builder, newSnapId):
-    builder.PrependStructSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(newSnapId), 0)
+    builder.PrependStructSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(newSnapId), 0
+    )
+
 
 def AddNewSnapId(builder, newSnapId):
     NewCommitUpdateAddNewSnapId(builder, newSnapId)
 
+
 def NewCommitUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return NewCommitUpdateEnd(builder)

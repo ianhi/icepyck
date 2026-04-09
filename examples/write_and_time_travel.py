@@ -57,7 +57,9 @@ print(session)
 # 3. Second commit: afternoon readings — all values change
 # --------------------------------------------------------------------------
 root["observations/temperature"][:] = np.array([22.1, 23.4, 25.0, 24.2, 21.9])
-root["observations/pressure"][:] = np.array([1010.5, 1009.8, 1008.2, 1007.6, 1009.0], dtype="float32")
+root["observations/pressure"][:] = np.array(
+    [1010.5, 1009.8, 1008.2, 1007.6, 1009.0], dtype="float32"
+)
 
 snap_v2 = session.commit("Afternoon readings")
 print(f"\nCommit 2: {session.snapshot_id}")
@@ -66,7 +68,9 @@ print(f"\nCommit 2: {session.snapshot_id}")
 # 4. Third commit: evening readings + add humidity
 # --------------------------------------------------------------------------
 root["observations/temperature"][:] = np.array([19.0, 18.5, 17.2, 16.8, 18.1])
-root["observations/pressure"][:] = np.array([1011.0, 1011.5, 1012.3, 1012.8, 1011.9], dtype="float32")
+root["observations/pressure"][:] = np.array(
+    [1011.0, 1011.5, 1012.3, 1012.8, 1011.9], dtype="float32"
+)
 
 humidity = root.create_array(
     "observations/humidity",

@@ -9,10 +9,10 @@
 
 from pathlib import Path
 
+import icechunk
 import numpy as np
 import zarr
 
-import icechunk
 import icepyck
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -46,8 +46,12 @@ for name, repo_path in repos.items():
         pyck_arr = np.array(pyck_root[zarr_path][:])
         ref_arr = np.array(ref_root[zarr_path][:])
         match = np.array_equal(pyck_arr, ref_arr)
-        print(f"  {node.path}: shape={pyck_arr.shape} dtype={pyck_arr.dtype} match={match}")
+        print(
+            f"  {node.path}: shape={pyck_arr.shape} dtype={pyck_arr.dtype} match={match}"
+        )
         if match:
             print(f"    sample: {pyck_arr.flat[:5]}")
         else:
-            print(f"    MISMATCH! icepyck={pyck_arr.flat[:5]} icechunk={ref_arr.flat[:5]}")
+            print(
+                f"    MISMATCH! icepyck={pyck_arr.flat[:5]} icechunk={ref_arr.flat[:5]}"
+            )

@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class Repo(object):
-    __slots__ = ['_tab']
+
+class Repo:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class Repo(object):
     def GetRootAsRepo(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # Repo
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -39,6 +42,7 @@ class Repo(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.Ref import Ref
+
             obj = Ref()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -64,6 +68,7 @@ class Repo(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.Ref import Ref
+
             obj = Ref()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -86,7 +91,9 @@ class Repo(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.String(a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.String(
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4)
+            )
         return ""
 
     # Repo
@@ -109,6 +116,7 @@ class Repo(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.SnapshotInfo import SnapshotInfo
+
             obj = SnapshotInfo()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -132,6 +140,7 @@ class Repo(object):
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
             from icepyck.generated.RepoStatus import RepoStatus
+
             obj = RepoStatus()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -145,6 +154,7 @@ class Repo(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.MetadataItem import MetadataItem
+
             obj = MetadataItem()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -170,6 +180,7 @@ class Repo(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.Update import Update
+
             obj = Update()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -199,7 +210,10 @@ class Repo(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # Repo
@@ -226,7 +240,10 @@ class Repo(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(24))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint16Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 2))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint16Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 2),
+            )
         return 0
 
     # Repo
@@ -253,7 +270,10 @@ class Repo(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(26))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint16Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 2))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint16Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 2),
+            )
         return 0
 
     # Repo
@@ -280,7 +300,10 @@ class Repo(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(28))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # Repo
@@ -302,152 +325,226 @@ class Repo(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(28))
         return o == 0
 
+
 def RepoStart(builder):
     builder.StartObject(13)
+
 
 def Start(builder):
     RepoStart(builder)
 
+
 def RepoAddSpecVersion(builder, specVersion):
     builder.PrependUint8Slot(0, specVersion, 0)
+
 
 def AddSpecVersion(builder, specVersion):
     RepoAddSpecVersion(builder, specVersion)
 
+
 def RepoAddTags(builder, tags):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(tags), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(tags), 0
+    )
+
 
 def AddTags(builder, tags):
     RepoAddTags(builder, tags)
 
+
 def RepoStartTagsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartTagsVector(builder, numElems):
     return RepoStartTagsVector(builder, numElems)
 
+
 def RepoAddBranches(builder, branches):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(branches), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(branches), 0
+    )
+
 
 def AddBranches(builder, branches):
     RepoAddBranches(builder, branches)
 
+
 def RepoStartBranchesVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartBranchesVector(builder, numElems):
     return RepoStartBranchesVector(builder, numElems)
 
+
 def RepoAddDeletedTags(builder, deletedTags):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(deletedTags), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(deletedTags), 0
+    )
+
 
 def AddDeletedTags(builder, deletedTags):
     RepoAddDeletedTags(builder, deletedTags)
 
+
 def RepoStartDeletedTagsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartDeletedTagsVector(builder, numElems):
     return RepoStartDeletedTagsVector(builder, numElems)
 
+
 def RepoAddSnapshots(builder, snapshots):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(snapshots), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(snapshots), 0
+    )
+
 
 def AddSnapshots(builder, snapshots):
     RepoAddSnapshots(builder, snapshots)
 
+
 def RepoStartSnapshotsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartSnapshotsVector(builder, numElems):
     return RepoStartSnapshotsVector(builder, numElems)
 
+
 def RepoAddStatus(builder, status):
-    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(status), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        5, flatbuffers.number_types.UOffsetTFlags.py_type(status), 0
+    )
+
 
 def AddStatus(builder, status):
     RepoAddStatus(builder, status)
 
+
 def RepoAddMetadata(builder, metadata):
-    builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(metadata), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        6, flatbuffers.number_types.UOffsetTFlags.py_type(metadata), 0
+    )
+
 
 def AddMetadata(builder, metadata):
     RepoAddMetadata(builder, metadata)
 
+
 def RepoStartMetadataVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartMetadataVector(builder, numElems):
     return RepoStartMetadataVector(builder, numElems)
 
+
 def RepoAddLatestUpdates(builder, latestUpdates):
-    builder.PrependUOffsetTRelativeSlot(7, flatbuffers.number_types.UOffsetTFlags.py_type(latestUpdates), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        7, flatbuffers.number_types.UOffsetTFlags.py_type(latestUpdates), 0
+    )
+
 
 def AddLatestUpdates(builder, latestUpdates):
     RepoAddLatestUpdates(builder, latestUpdates)
 
+
 def RepoStartLatestUpdatesVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartLatestUpdatesVector(builder, numElems):
     return RepoStartLatestUpdatesVector(builder, numElems)
 
+
 def RepoAddRepoBeforeUpdates(builder, repoBeforeUpdates):
-    builder.PrependUOffsetTRelativeSlot(8, flatbuffers.number_types.UOffsetTFlags.py_type(repoBeforeUpdates), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        8, flatbuffers.number_types.UOffsetTFlags.py_type(repoBeforeUpdates), 0
+    )
+
 
 def AddRepoBeforeUpdates(builder, repoBeforeUpdates):
     RepoAddRepoBeforeUpdates(builder, repoBeforeUpdates)
 
+
 def RepoAddConfig(builder, config):
-    builder.PrependUOffsetTRelativeSlot(9, flatbuffers.number_types.UOffsetTFlags.py_type(config), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        9, flatbuffers.number_types.UOffsetTFlags.py_type(config), 0
+    )
+
 
 def AddConfig(builder, config):
     RepoAddConfig(builder, config)
 
+
 def RepoStartConfigVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartConfigVector(builder, numElems):
     return RepoStartConfigVector(builder, numElems)
 
+
 def RepoAddEnabledFeatureFlags(builder, enabledFeatureFlags):
-    builder.PrependUOffsetTRelativeSlot(10, flatbuffers.number_types.UOffsetTFlags.py_type(enabledFeatureFlags), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        10, flatbuffers.number_types.UOffsetTFlags.py_type(enabledFeatureFlags), 0
+    )
+
 
 def AddEnabledFeatureFlags(builder, enabledFeatureFlags):
     RepoAddEnabledFeatureFlags(builder, enabledFeatureFlags)
 
+
 def RepoStartEnabledFeatureFlagsVector(builder, numElems):
     return builder.StartVector(2, numElems, 2)
+
 
 def StartEnabledFeatureFlagsVector(builder, numElems):
     return RepoStartEnabledFeatureFlagsVector(builder, numElems)
 
+
 def RepoAddDisabledFeatureFlags(builder, disabledFeatureFlags):
-    builder.PrependUOffsetTRelativeSlot(11, flatbuffers.number_types.UOffsetTFlags.py_type(disabledFeatureFlags), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        11, flatbuffers.number_types.UOffsetTFlags.py_type(disabledFeatureFlags), 0
+    )
+
 
 def AddDisabledFeatureFlags(builder, disabledFeatureFlags):
     RepoAddDisabledFeatureFlags(builder, disabledFeatureFlags)
 
+
 def RepoStartDisabledFeatureFlagsVector(builder, numElems):
     return builder.StartVector(2, numElems, 2)
+
 
 def StartDisabledFeatureFlagsVector(builder, numElems):
     return RepoStartDisabledFeatureFlagsVector(builder, numElems)
 
+
 def RepoAddExtra(builder, extra):
-    builder.PrependUOffsetTRelativeSlot(12, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        12, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0
+    )
+
 
 def AddExtra(builder, extra):
     RepoAddExtra(builder, extra)
 
+
 def RepoStartExtraVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartExtraVector(builder, numElems):
     return RepoStartExtraVector(builder, numElems)
 
+
 def RepoEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return RepoEnd(builder)

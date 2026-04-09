@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class CommitAmendedUpdate(object):
-    __slots__ = ['_tab']
+
+class CommitAmendedUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class CommitAmendedUpdate(object):
     def GetRootAsCommitAmendedUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # CommitAmendedUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -37,6 +40,7 @@ class CommitAmendedUpdate(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -48,37 +52,54 @@ class CommitAmendedUpdate(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
         return None
 
+
 def CommitAmendedUpdateStart(builder):
     builder.StartObject(3)
+
 
 def Start(builder):
     CommitAmendedUpdateStart(builder)
 
+
 def CommitAmendedUpdateAddBranch(builder, branch):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(branch), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(branch), 0
+    )
+
 
 def AddBranch(builder, branch):
     CommitAmendedUpdateAddBranch(builder, branch)
 
+
 def CommitAmendedUpdateAddPreviousSnapId(builder, previousSnapId):
-    builder.PrependStructSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(previousSnapId), 0)
+    builder.PrependStructSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(previousSnapId), 0
+    )
+
 
 def AddPreviousSnapId(builder, previousSnapId):
     CommitAmendedUpdateAddPreviousSnapId(builder, previousSnapId)
 
+
 def CommitAmendedUpdateAddNewSnapId(builder, newSnapId):
-    builder.PrependStructSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(newSnapId), 0)
+    builder.PrependStructSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(newSnapId), 0
+    )
+
 
 def AddNewSnapId(builder, newSnapId):
     CommitAmendedUpdateAddNewSnapId(builder, newSnapId)
 
+
 def CommitAmendedUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return CommitAmendedUpdateEnd(builder)

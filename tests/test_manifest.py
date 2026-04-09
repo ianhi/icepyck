@@ -1,9 +1,10 @@
 """Tests for ManifestReader: chunk refs, inline vs native."""
 
-import pytest
 from pathlib import Path
 
-from icepyck.manifest import ManifestReader, ChunkType
+import pytest
+
+from icepyck.manifest import ChunkType, ManifestReader
 from icepyck.repo import RepoInfo
 from icepyck.snapshot import SnapshotReader
 

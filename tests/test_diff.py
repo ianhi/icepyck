@@ -105,9 +105,7 @@ class TestDiffAddedRemoved:
         reason="basic test repo not available",
     )
 
-    def test_initial_to_first_commit_has_added_nodes(
-        self, basic_repo: Path
-    ) -> None:
+    def test_initial_to_first_commit_has_added_nodes(self, basic_repo: Path) -> None:
         # main~2 is the initial empty commit, main~1 is first data commit
         diff = diff_snapshots(basic_repo, "main~2", "main~1")
         added_paths = {n.path for n in diff.added_nodes}

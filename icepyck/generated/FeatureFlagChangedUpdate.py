@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class FeatureFlagChangedUpdate(object):
-    __slots__ = ['_tab']
+
+class FeatureFlagChangedUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class FeatureFlagChangedUpdate(object):
     def GetRootAsFeatureFlagChangedUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # FeatureFlagChangedUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -28,49 +31,65 @@ class FeatureFlagChangedUpdate(object):
     def Id(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint16Flags, o + self._tab.Pos
+            )
         return 0
 
     # FeatureFlagChangedUpdate
     def NewValue(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # FeatureFlagChangedUpdate
     def IsSet(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
+
 
 def FeatureFlagChangedUpdateStart(builder):
     builder.StartObject(3)
 
+
 def Start(builder):
     FeatureFlagChangedUpdateStart(builder)
+
 
 def FeatureFlagChangedUpdateAddId(builder, id):
     builder.PrependUint16Slot(0, id, 0)
 
+
 def AddId(builder, id):
     FeatureFlagChangedUpdateAddId(builder, id)
+
 
 def FeatureFlagChangedUpdateAddNewValue(builder, newValue):
     builder.PrependBoolSlot(1, newValue, 0)
 
+
 def AddNewValue(builder, newValue):
     FeatureFlagChangedUpdateAddNewValue(builder, newValue)
+
 
 def FeatureFlagChangedUpdateAddIsSet(builder, isSet):
     builder.PrependBoolSlot(2, isSet, 0)
 
+
 def AddIsSet(builder, isSet):
     FeatureFlagChangedUpdateAddIsSet(builder, isSet)
 
+
 def FeatureFlagChangedUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return FeatureFlagChangedUpdateEnd(builder)

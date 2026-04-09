@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class MetadataChangedUpdate(object):
-    __slots__ = ['_tab']
+
+class MetadataChangedUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,18 +22,23 @@ class MetadataChangedUpdate(object):
     def GetRootAsMetadataChangedUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # MetadataChangedUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
+
 def MetadataChangedUpdateStart(builder):
     builder.StartObject(0)
+
 
 def Start(builder):
     MetadataChangedUpdateStart(builder)
 
+
 def MetadataChangedUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return MetadataChangedUpdateEnd(builder)

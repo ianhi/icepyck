@@ -78,9 +78,7 @@ class S3Storage:
         # Sync fs for open/session (runs outside any event loop)
         self._sync_fs = s3fs.S3FileSystem(anon=anon, **s3_kwargs)
         # Async fs for zarr store reads (runs inside zarr's event loop)
-        self._async_fs = s3fs.S3FileSystem(
-            anon=anon, asynchronous=True, **s3_kwargs
-        )
+        self._async_fs = s3fs.S3FileSystem(anon=anon, asynchronous=True, **s3_kwargs)
         self._root = url.removeprefix("s3://").rstrip("/")
         self._cache: dict[str, bytes] = {}
 

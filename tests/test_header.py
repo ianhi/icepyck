@@ -1,14 +1,14 @@
 """Tests for the binary header parser."""
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from icepyck.header import (
-    MAGIC,
     HEADER_SIZE,
-    FileType,
+    MAGIC,
     Compression,
-    Header,
+    FileType,
     parse_file,
 )
 
@@ -78,7 +78,9 @@ class TestParseRepoFile:
 
 class TestParseSnapshotFile:
     @pytest.mark.skipif(
-        not (Path(__file__).parent.parent / "test-repos" / "basic" / "snapshots").exists(),
+        not (
+            Path(__file__).parent.parent / "test-repos" / "basic" / "snapshots"
+        ).exists(),
         reason="basic test repo snapshots not available",
     )
     def test_snapshot_file_type(self, snapshot_file):
@@ -88,7 +90,9 @@ class TestParseSnapshotFile:
 
 class TestParseManifestFile:
     @pytest.mark.skipif(
-        not (Path(__file__).parent.parent / "test-repos" / "basic" / "manifests").exists(),
+        not (
+            Path(__file__).parent.parent / "test-repos" / "basic" / "manifests"
+        ).exists(),
         reason="basic test repo manifests not available",
     )
     def test_manifest_file_type(self, manifest_file):

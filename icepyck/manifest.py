@@ -129,8 +129,7 @@ def _parse_manifest_payload(
 
     if header.file_type != FileType.MANIFEST:  # type: ignore[union-attr]
         raise ValueError(
-            f"Expected MANIFEST file type ({FileType.MANIFEST}), "
-            f"got {header.file_type}"  # type: ignore[union-attr]
+            f"Expected MANIFEST file type ({FileType.MANIFEST}), got {header.file_type}"  # type: ignore[union-attr]
         )
 
     buf = bytearray(payload)
@@ -158,9 +157,7 @@ def _parse_manifest_payload(
             inline_len = cref.InlineLength()
             if inline_len > 0:
                 # Inline chunk
-                inline_data = bytes(
-                    cref.Inline(k) for k in range(inline_len)
-                )
+                inline_data = bytes(cref.Inline(k) for k in range(inline_len))
                 refs.append(
                     ChunkRefInfo(
                         index=index,

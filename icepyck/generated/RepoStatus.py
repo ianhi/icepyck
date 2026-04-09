@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class RepoStatus(object):
-    __slots__ = ['_tab']
+
+class RepoStatus:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class RepoStatus(object):
     def GetRootAsRepoStatus(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # RepoStatus
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -35,7 +38,9 @@ class RepoStatus(object):
     def SetAt(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # RepoStatus
@@ -45,32 +50,44 @@ class RepoStatus(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
+
 def RepoStatusStart(builder):
     builder.StartObject(3)
+
 
 def Start(builder):
     RepoStatusStart(builder)
 
+
 def RepoStatusAddAvailability(builder, availability):
     builder.PrependUint8Slot(0, availability, 0)
+
 
 def AddAvailability(builder, availability):
     RepoStatusAddAvailability(builder, availability)
 
+
 def RepoStatusAddSetAt(builder, setAt):
     builder.PrependUint64Slot(1, setAt, 0)
+
 
 def AddSetAt(builder, setAt):
     RepoStatusAddSetAt(builder, setAt)
 
+
 def RepoStatusAddLimitedAvailabilityReason(builder, limitedAvailabilityReason):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(limitedAvailabilityReason), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(limitedAvailabilityReason), 0
+    )
+
 
 def AddLimitedAvailabilityReason(builder, limitedAvailabilityReason):
     RepoStatusAddLimitedAvailabilityReason(builder, limitedAvailabilityReason)
 
+
 def RepoStatusEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return RepoStatusEnd(builder)

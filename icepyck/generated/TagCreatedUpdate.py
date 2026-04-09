@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class TagCreatedUpdate(object):
-    __slots__ = ['_tab']
+
+class TagCreatedUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class TagCreatedUpdate(object):
     def GetRootAsTagCreatedUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # TagCreatedUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -31,20 +34,28 @@ class TagCreatedUpdate(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
+
 def TagCreatedUpdateStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     TagCreatedUpdateStart(builder)
 
+
 def TagCreatedUpdateAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
+    )
+
 
 def AddName(builder, name):
     TagCreatedUpdateAddName(builder, name)
 
+
 def TagCreatedUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return TagCreatedUpdateEnd(builder)

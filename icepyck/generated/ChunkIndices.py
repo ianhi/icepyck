@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ChunkIndices(object):
-    __slots__ = ['_tab']
+
+class ChunkIndices:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class ChunkIndices(object):
     def GetRootAsChunkIndices(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # ChunkIndices
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -29,7 +32,10 @@ class ChunkIndices(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # ChunkIndices
@@ -51,26 +57,36 @@ class ChunkIndices(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
+
 def ChunkIndicesStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     ChunkIndicesStart(builder)
 
+
 def ChunkIndicesAddCoords(builder, coords):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(coords), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(coords), 0
+    )
+
 
 def AddCoords(builder, coords):
     ChunkIndicesAddCoords(builder, coords)
 
+
 def ChunkIndicesStartCoordsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartCoordsVector(builder, numElems):
     return ChunkIndicesStartCoordsVector(builder, numElems)
 
+
 def ChunkIndicesEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ChunkIndicesEnd(builder)

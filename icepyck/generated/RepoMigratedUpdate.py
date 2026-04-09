@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class RepoMigratedUpdate(object):
-    __slots__ = ['_tab']
+
+class RepoMigratedUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class RepoMigratedUpdate(object):
     def GetRootAsRepoMigratedUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # RepoMigratedUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -38,26 +41,34 @@ class RepoMigratedUpdate(object):
             return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
         return 0
 
+
 def RepoMigratedUpdateStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     RepoMigratedUpdateStart(builder)
 
+
 def RepoMigratedUpdateAddFromVersion(builder, fromVersion):
     builder.PrependUint8Slot(0, fromVersion, 0)
+
 
 def AddFromVersion(builder, fromVersion):
     RepoMigratedUpdateAddFromVersion(builder, fromVersion)
 
+
 def RepoMigratedUpdateAddToVersion(builder, toVersion):
     builder.PrependUint8Slot(1, toVersion, 0)
+
 
 def AddToVersion(builder, toVersion):
     RepoMigratedUpdateAddToVersion(builder, toVersion)
 
+
 def RepoMigratedUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return RepoMigratedUpdateEnd(builder)

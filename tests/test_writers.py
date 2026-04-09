@@ -23,13 +23,9 @@ from icepyck.writers import (
     NodeWriteData,
     SnapshotInfoData,
     build_manifest,
-    build_manifest_payload,
     build_repo,
-    build_repo_payload,
     build_snapshot,
-    build_snapshot_payload,
     build_transaction_log,
-    build_transaction_log_payload,
 )
 
 
@@ -204,8 +200,8 @@ class TestSnapshotRoundTrip:
             snapshot_id,
             nodes=[],
         )
-        from icepyck.header import parse_bytes as hparse
         from icepyck.generated.Snapshot import Snapshot
+        from icepyck.header import parse_bytes as hparse
 
         _, payload = hparse(data)
         snap = Snapshot.GetRootAs(payload)
@@ -354,8 +350,8 @@ class TestRepoRoundTrip:
         assert repo.get_tag_snapshot_id("v1") == s1
 
     def test_header_is_repo_type(self) -> None:
-        data = build_repo(2, {"main": 0}, {}, [
-            SnapshotInfoData(snapshot_id=generate_id12())
-        ])
+        data = build_repo(
+            2, {"main": 0}, {}, [SnapshotInfoData(snapshot_id=generate_id12())]
+        )
         header, _ = parse_bytes(data)
         assert header.file_type == FileType.REPO_INFO

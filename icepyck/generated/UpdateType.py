@@ -2,7 +2,8 @@
 
 # namespace: generated
 
-class UpdateType(object):
+
+class UpdateType:
     NONE = 0
     RepoInitializedUpdate = 1
     RepoMigratedUpdate = 2

@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class NodeSnapshot(object):
-    __slots__ = ['_tab']
+
+class NodeSnapshot:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class NodeSnapshot(object):
     def GetRootAsNodeSnapshot(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # NodeSnapshot
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -30,6 +33,7 @@ class NodeSnapshot(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -47,7 +51,10 @@ class NodeSnapshot(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # NodeSnapshot
@@ -81,6 +88,7 @@ class NodeSnapshot(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             from flatbuffers.table import Table
+
             obj = Table(bytearray(), 0)
             self._tab.Union(obj, o)
             return obj
@@ -91,7 +99,10 @@ class NodeSnapshot(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # NodeSnapshot
@@ -113,62 +124,90 @@ class NodeSnapshot(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         return o == 0
 
+
 def NodeSnapshotStart(builder):
     builder.StartObject(6)
+
 
 def Start(builder):
     NodeSnapshotStart(builder)
 
+
 def NodeSnapshotAddId(builder, id):
     builder.PrependStructSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(id), 0)
+
 
 def AddId(builder, id):
     NodeSnapshotAddId(builder, id)
 
+
 def NodeSnapshotAddPath(builder, path):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(path), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(path), 0
+    )
+
 
 def AddPath(builder, path):
     NodeSnapshotAddPath(builder, path)
 
+
 def NodeSnapshotAddUserData(builder, userData):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(userData), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(userData), 0
+    )
+
 
 def AddUserData(builder, userData):
     NodeSnapshotAddUserData(builder, userData)
 
+
 def NodeSnapshotStartUserDataVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartUserDataVector(builder, numElems):
     return NodeSnapshotStartUserDataVector(builder, numElems)
 
+
 def NodeSnapshotAddNodeDataType(builder, nodeDataType):
     builder.PrependUint8Slot(3, nodeDataType, 0)
+
 
 def AddNodeDataType(builder, nodeDataType):
     NodeSnapshotAddNodeDataType(builder, nodeDataType)
 
+
 def NodeSnapshotAddNodeData(builder, nodeData):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(nodeData), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(nodeData), 0
+    )
+
 
 def AddNodeData(builder, nodeData):
     NodeSnapshotAddNodeData(builder, nodeData)
 
+
 def NodeSnapshotAddExtra(builder, extra):
-    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        5, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0
+    )
+
 
 def AddExtra(builder, extra):
     NodeSnapshotAddExtra(builder, extra)
 
+
 def NodeSnapshotStartExtraVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartExtraVector(builder, numElems):
     return NodeSnapshotStartExtraVector(builder, numElems)
 
+
 def NodeSnapshotEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return NodeSnapshotEnd(builder)

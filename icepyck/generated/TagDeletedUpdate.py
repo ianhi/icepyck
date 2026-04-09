@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class TagDeletedUpdate(object):
-    __slots__ = ['_tab']
+
+class TagDeletedUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class TagDeletedUpdate(object):
     def GetRootAsTagDeletedUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # TagDeletedUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -37,31 +40,44 @@ class TagDeletedUpdate(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
         return None
 
+
 def TagDeletedUpdateStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     TagDeletedUpdateStart(builder)
 
+
 def TagDeletedUpdateAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
+    )
+
 
 def AddName(builder, name):
     TagDeletedUpdateAddName(builder, name)
 
+
 def TagDeletedUpdateAddPreviousSnapId(builder, previousSnapId):
-    builder.PrependStructSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(previousSnapId), 0)
+    builder.PrependStructSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(previousSnapId), 0
+    )
+
 
 def AddPreviousSnapId(builder, previousSnapId):
     TagDeletedUpdateAddPreviousSnapId(builder, previousSnapId)
 
+
 def TagDeletedUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return TagDeletedUpdateEnd(builder)

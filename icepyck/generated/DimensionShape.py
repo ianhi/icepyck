@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class DimensionShape(object):
-    __slots__ = ['_tab']
+
+class DimensionShape:
+    __slots__ = ["_tab"]
 
     @classmethod
     def SizeOf(cls):
@@ -18,9 +20,19 @@ class DimensionShape(object):
         self._tab = flatbuffers.table.Table(buf, pos)
 
     # DimensionShape
-    def ArrayLength(self): return self._tab.Get(flatbuffers.number_types.Uint64Flags, self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(0))
+    def ArrayLength(self):
+        return self._tab.Get(
+            flatbuffers.number_types.Uint64Flags,
+            self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(0),
+        )
+
     # DimensionShape
-    def ChunkLength(self): return self._tab.Get(flatbuffers.number_types.Uint64Flags, self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(8))
+    def ChunkLength(self):
+        return self._tab.Get(
+            flatbuffers.number_types.Uint64Flags,
+            self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(8),
+        )
+
 
 def CreateDimensionShape(builder, arrayLength, chunkLength):
     builder.Prep(8, 16)

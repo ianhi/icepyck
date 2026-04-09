@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ChunkIndexRange(object):
-    __slots__ = ['_tab']
+
+class ChunkIndexRange:
+    __slots__ = ["_tab"]
 
     @classmethod
     def SizeOf(cls):
@@ -18,9 +20,19 @@ class ChunkIndexRange(object):
         self._tab = flatbuffers.table.Table(buf, pos)
 
     # ChunkIndexRange
-    def From(self): return self._tab.Get(flatbuffers.number_types.Uint32Flags, self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(0))
+    def From(self):
+        return self._tab.Get(
+            flatbuffers.number_types.Uint32Flags,
+            self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(0),
+        )
+
     # ChunkIndexRange
-    def To(self): return self._tab.Get(flatbuffers.number_types.Uint32Flags, self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(4))
+    def To(self):
+        return self._tab.Get(
+            flatbuffers.number_types.Uint32Flags,
+            self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(4),
+        )
+
 
 def CreateChunkIndexRange(builder, from_, to):
     builder.Prep(4, 8)

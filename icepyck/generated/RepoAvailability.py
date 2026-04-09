@@ -2,7 +2,8 @@
 
 # namespace: generated
 
-class RepoAvailability(object):
+
+class RepoAvailability:
     Online = 0
     ReadOnly = 1
     Offline = 2

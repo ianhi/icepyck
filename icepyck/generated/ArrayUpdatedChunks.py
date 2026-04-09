@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ArrayUpdatedChunks(object):
-    __slots__ = ['_tab']
+
+class ArrayUpdatedChunks:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class ArrayUpdatedChunks(object):
     def GetRootAsArrayUpdatedChunks(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # ArrayUpdatedChunks
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -30,6 +33,7 @@ class ArrayUpdatedChunks(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -43,6 +47,7 @@ class ArrayUpdatedChunks(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.ChunkIndices import ChunkIndices
+
             obj = ChunkIndices()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -60,32 +65,46 @@ class ArrayUpdatedChunks(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         return o == 0
 
+
 def ArrayUpdatedChunksStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     ArrayUpdatedChunksStart(builder)
 
+
 def ArrayUpdatedChunksAddNodeId(builder, nodeId):
-    builder.PrependStructSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(nodeId), 0)
+    builder.PrependStructSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(nodeId), 0
+    )
+
 
 def AddNodeId(builder, nodeId):
     ArrayUpdatedChunksAddNodeId(builder, nodeId)
 
+
 def ArrayUpdatedChunksAddChunks(builder, chunks):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(chunks), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(chunks), 0
+    )
+
 
 def AddChunks(builder, chunks):
     ArrayUpdatedChunksAddChunks(builder, chunks)
 
+
 def ArrayUpdatedChunksStartChunksVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartChunksVector(builder, numElems):
     return ArrayUpdatedChunksStartChunksVector(builder, numElems)
 
+
 def ArrayUpdatedChunksEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ArrayUpdatedChunksEnd(builder)

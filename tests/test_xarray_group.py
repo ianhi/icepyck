@@ -34,21 +34,32 @@ def grouped_repo(tmp_path):
     g = root.create_group("mygroup")
 
     # Coordinate arrays (1-D)
-    g.create_array("time", shape=(10,), dtype="i8", chunks=(10,), dimension_names=["time"])
+    g.create_array(
+        "time", shape=(10,), dtype="i8", chunks=(10,), dimension_names=["time"]
+    )
     g.create_array("lat", shape=(5,), dtype="f4", chunks=(5,), dimension_names=["lat"])
     g.create_array("lon", shape=(8,), dtype="f4", chunks=(8,), dimension_names=["lon"])
 
     # Data arrays (3-D, referencing coord dimensions)
     g.create_array(
-        "temperature", shape=(10, 5, 8), dtype="f4", chunks=(5, 5, 8),
+        "temperature",
+        shape=(10, 5, 8),
+        dtype="f4",
+        chunks=(5, 5, 8),
         dimension_names=["time", "lat", "lon"],
     )
     g.create_array(
-        "pressure", shape=(10, 5, 8), dtype="f4", chunks=(5, 5, 8),
+        "pressure",
+        shape=(10, 5, 8),
+        dtype="f4",
+        chunks=(5, 5, 8),
         dimension_names=["time", "lat", "lon"],
     )
     g.create_array(
-        "humidity", shape=(10, 5, 8), dtype="f4", chunks=(5, 5, 8),
+        "humidity",
+        shape=(10, 5, 8),
+        dtype="f4",
+        chunks=(5, 5, 8),
         dimension_names=["time", "lat", "lon"],
     )
 

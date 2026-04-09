@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ManifestFileInfo(object):
-    __slots__ = ['_tab']
+
+class ManifestFileInfo:
+    __slots__ = ["_tab"]
 
     @classmethod
     def SizeOf(cls):
@@ -23,9 +25,19 @@ class ManifestFileInfo(object):
         return obj
 
     # ManifestFileInfo
-    def SizeBytes(self): return self._tab.Get(flatbuffers.number_types.Uint64Flags, self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(16))
+    def SizeBytes(self):
+        return self._tab.Get(
+            flatbuffers.number_types.Uint64Flags,
+            self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(16),
+        )
+
     # ManifestFileInfo
-    def NumChunkRefs(self): return self._tab.Get(flatbuffers.number_types.Uint32Flags, self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(24))
+    def NumChunkRefs(self):
+        return self._tab.Get(
+            flatbuffers.number_types.Uint32Flags,
+            self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(24),
+        )
+
 
 def CreateManifestFileInfo(builder, id_bytes, sizeBytes, numChunkRefs):
     builder.Prep(8, 32)
@@ -34,6 +46,6 @@ def CreateManifestFileInfo(builder, id_bytes, sizeBytes, numChunkRefs):
     builder.PrependUint64(sizeBytes)
     builder.Pad(4)
     builder.Prep(1, 12)
-    for _idx0 in range(12 , 0, -1):
-        builder.PrependUint8(id_bytes[_idx0-1])
+    for _idx0 in range(12, 0, -1):
+        builder.PrependUint8(id_bytes[_idx0 - 1])
     return builder.Offset()

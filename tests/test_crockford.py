@@ -2,7 +2,7 @@
 
 import pytest
 
-from icepyck.crockford import encode, decode
+from icepyck.crockford import decode, encode
 
 
 class TestEncode:
@@ -29,7 +29,9 @@ class TestEncode:
 class TestDecode:
     def test_known_value(self):
         """Decode a known Crockford string to its expected bytes."""
-        assert decode("1CECHNKREP0F1RSTCMT0") == bytes.fromhex("0b1cc8d6787580f0e33a6534")
+        assert decode("1CECHNKREP0F1RSTCMT0") == bytes.fromhex(
+            "0b1cc8d6787580f0e33a6534"
+        )
 
     def test_lowercase_accepted(self):
         """Lowercase input should decode identically to uppercase."""

@@ -66,7 +66,7 @@ class SnapshotReader:
         cls,
         storage: Storage,
         snapshot_id: bytes,
-    ) -> "SnapshotReader":
+    ) -> SnapshotReader:
         """Async constructor: fetch snapshot bytes in a thread, then parse.
 
         Uses ``asyncio.to_thread`` so the event loop stays free during the

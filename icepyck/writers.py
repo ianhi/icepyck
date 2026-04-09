@@ -27,8 +27,8 @@ from icepyck.generated.ArrayNodeData import (
     ArrayNodeDataEnd,
     ArrayNodeDataStart,
     ArrayNodeDataStartManifestsVector,
-    ArrayNodeDataStartShapeVector,
     ArrayNodeDataStartShapeV2Vector,
+    ArrayNodeDataStartShapeVector,
 )
 from icepyck.generated.ArrayUpdatedChunks import (
     ArrayUpdatedChunksAddChunks,
@@ -37,14 +37,18 @@ from icepyck.generated.ArrayUpdatedChunks import (
     ArrayUpdatedChunksStart,
     ArrayUpdatedChunksStartChunksVector,
 )
-from icepyck.generated.ChunkIndexRange import CreateChunkIndexRange
-from icepyck.generated.DimensionShape import CreateDimensionShape
-from icepyck.generated.DimensionShapeV2 import (
-    DimensionShapeV2AddArrayLength,
-    DimensionShapeV2AddNumChunks,
-    DimensionShapeV2End,
-    DimensionShapeV2Start,
+from icepyck.generated.BranchCreatedUpdate import (
+    BranchCreatedUpdateAddName,
+    BranchCreatedUpdateEnd,
+    BranchCreatedUpdateStart,
 )
+from icepyck.generated.BranchDeletedUpdate import (
+    BranchDeletedUpdateAddName,
+    BranchDeletedUpdateAddPreviousSnapId,
+    BranchDeletedUpdateEnd,
+    BranchDeletedUpdateStart,
+)
+from icepyck.generated.ChunkIndexRange import CreateChunkIndexRange
 from icepyck.generated.ChunkIndices import (
     ChunkIndicesAddCoords,
     ChunkIndicesEnd,
@@ -60,7 +64,12 @@ from icepyck.generated.ChunkRef import (
     ChunkRefEnd,
     ChunkRefStart,
     ChunkRefStartIndexVector,
-    ChunkRefStartInlineVector,
+)
+from icepyck.generated.DimensionShapeV2 import (
+    DimensionShapeV2AddArrayLength,
+    DimensionShapeV2AddNumChunks,
+    DimensionShapeV2End,
+    DimensionShapeV2Start,
 )
 from icepyck.generated.GroupNodeData import (
     GroupNodeDataEnd,
@@ -87,6 +96,12 @@ from icepyck.generated.ManifestRef import (
     ManifestRefStart,
     ManifestRefStartExtentsVector,
 )
+from icepyck.generated.NewCommitUpdate import (
+    NewCommitUpdateAddBranch,
+    NewCommitUpdateAddNewSnapId,
+    NewCommitUpdateEnd,
+    NewCommitUpdateStart,
+)
 from icepyck.generated.NodeData import NodeData
 from icepyck.generated.NodeSnapshot import (
     NodeSnapshotAddId,
@@ -96,10 +111,9 @@ from icepyck.generated.NodeSnapshot import (
     NodeSnapshotAddUserData,
     NodeSnapshotEnd,
     NodeSnapshotStart,
-    NodeSnapshotStartUserDataVector,
 )
-from icepyck.generated.ObjectId12 import CreateObjectId12
 from icepyck.generated.ObjectId8 import CreateObjectId8
+from icepyck.generated.ObjectId12 import CreateObjectId12
 from icepyck.generated.Ref import (
     RefAddName,
     RefAddSnapshotIndex,
@@ -123,6 +137,10 @@ from icepyck.generated.Repo import (
     RepoStartTagsVector,
 )
 from icepyck.generated.RepoAvailability import RepoAvailability
+from icepyck.generated.RepoInitializedUpdate import (
+    RepoInitializedUpdateEnd,
+    RepoInitializedUpdateStart,
+)
 from icepyck.generated.RepoStatus import (
     RepoStatusAddAvailability,
     RepoStatusAddSetAt,
@@ -139,8 +157,8 @@ from icepyck.generated.Snapshot import (
     SnapshotAddNodes,
     SnapshotEnd,
     SnapshotStart,
-    SnapshotStartManifestFilesVector,
     SnapshotStartManifestFilesV2Vector,
+    SnapshotStartManifestFilesVector,
     SnapshotStartMetadataVector,
     SnapshotStartNodesVector,
 )
@@ -151,44 +169,6 @@ from icepyck.generated.SnapshotInfo import (
     SnapshotInfoAddParentOffset,
     SnapshotInfoEnd,
     SnapshotInfoStart,
-)
-from icepyck.generated.TransactionLog import (
-    TransactionLogAddDeletedArrays,
-    TransactionLogAddDeletedGroups,
-    TransactionLogAddId,
-    TransactionLogAddNewArrays,
-    TransactionLogAddNewGroups,
-    TransactionLogAddUpdatedArrays,
-    TransactionLogAddUpdatedChunks,
-    TransactionLogAddUpdatedGroups,
-    TransactionLogEnd,
-    TransactionLogStart,
-    TransactionLogStartDeletedArraysVector,
-    TransactionLogStartDeletedGroupsVector,
-    TransactionLogStartNewArraysVector,
-    TransactionLogStartNewGroupsVector,
-    TransactionLogStartUpdatedArraysVector,
-    TransactionLogStartUpdatedChunksVector,
-    TransactionLogStartUpdatedGroupsVector,
-)
-from icepyck.generated.Update import (
-    UpdateAddUpdatedAt,
-    UpdateAddUpdateType,
-    UpdateAddUpdateTypeType,
-    UpdateEnd,
-    UpdateStart,
-)
-from icepyck.generated.UpdateType import UpdateType
-from icepyck.generated.BranchCreatedUpdate import (
-    BranchCreatedUpdateAddName,
-    BranchCreatedUpdateEnd,
-    BranchCreatedUpdateStart,
-)
-from icepyck.generated.BranchDeletedUpdate import (
-    BranchDeletedUpdateAddName,
-    BranchDeletedUpdateAddPreviousSnapId,
-    BranchDeletedUpdateEnd,
-    BranchDeletedUpdateStart,
 )
 from icepyck.generated.TagCreatedUpdate import (
     TagCreatedUpdateAddName,
@@ -201,17 +181,28 @@ from icepyck.generated.TagDeletedUpdate import (
     TagDeletedUpdateEnd,
     TagDeletedUpdateStart,
 )
-from icepyck.generated.NewCommitUpdate import (
-    NewCommitUpdateAddBranch,
-    NewCommitUpdateAddNewSnapId,
-    NewCommitUpdateEnd,
-    NewCommitUpdateStart,
+from icepyck.generated.TransactionLog import (
+    TransactionLogAddDeletedArrays,
+    TransactionLogAddDeletedGroups,
+    TransactionLogAddId,
+    TransactionLogAddNewArrays,
+    TransactionLogAddNewGroups,
+    TransactionLogAddUpdatedArrays,
+    TransactionLogAddUpdatedChunks,
+    TransactionLogAddUpdatedGroups,
+    TransactionLogEnd,
+    TransactionLogStart,
+    TransactionLogStartUpdatedChunksVector,
 )
-from icepyck.generated.RepoInitializedUpdate import (
-    RepoInitializedUpdateEnd,
-    RepoInitializedUpdateStart,
+from icepyck.generated.Update import (
+    UpdateAddUpdatedAt,
+    UpdateAddUpdateType,
+    UpdateAddUpdateTypeType,
+    UpdateEnd,
+    UpdateStart,
 )
-from icepyck.header import Compression, FileType, build_bytes
+from icepyck.generated.UpdateType import UpdateType
+from icepyck.header import FileType, build_bytes
 
 # ---------------------------------------------------------------------------
 # Data classes for builder inputs
@@ -309,13 +300,11 @@ class UpdateData:
 # ---------------------------------------------------------------------------
 
 
-def _build_id8_vector(
-    builder: flatbuffers.Builder, ids: list[bytes]
-) -> int:
+def _build_id8_vector(builder: flatbuffers.Builder, ids: list[bytes]) -> int:
     """Build a FlatBuffer vector of ObjectId8 structs."""
     # Structs are written inline — start vector, then create each struct
     # in reverse order.
-    vec_start = builder.StartVector(8, len(ids), 1)
+    builder.StartVector(8, len(ids), 1)
     for id_bytes in reversed(ids):
         CreateObjectId8(builder, list(id_bytes))
     return builder.EndVector()
@@ -353,9 +342,7 @@ def _build_chunk_ref(builder: flatbuffers.Builder, cref: ChunkRefData) -> int:
     return ChunkRefEnd(builder)
 
 
-def _build_array_manifest(
-    builder: flatbuffers.Builder, am: ArrayManifestData
-) -> int:
+def _build_array_manifest(builder: flatbuffers.Builder, am: ArrayManifestData) -> int:
     """Build a single ArrayManifest table. Returns the offset."""
     # Build all ChunkRef tables first
     ref_offsets = [_build_chunk_ref(builder, r) for r in am.refs]
@@ -415,9 +402,7 @@ def build_manifest(
 # ---------------------------------------------------------------------------
 
 
-def _build_manifest_ref(
-    builder: flatbuffers.Builder, mref: ManifestRefData
-) -> int:
+def _build_manifest_ref(builder: flatbuffers.Builder, mref: ManifestRefData) -> int:
     """Build a ManifestRef table."""
     # Extents vector (inline structs)
     ManifestRefStartExtentsVector(builder, len(mref.extents))
@@ -426,9 +411,7 @@ def _build_manifest_ref(
     extents_vec = builder.EndVector()
 
     ManifestRefStart(builder)
-    ManifestRefAddObjectId(
-        builder, CreateObjectId12(builder, list(mref.manifest_id))
-    )
+    ManifestRefAddObjectId(builder, CreateObjectId12(builder, list(mref.manifest_id)))
     ManifestRefAddExtents(builder, extents_vec)
     return ManifestRefEnd(builder)
 
@@ -449,16 +432,12 @@ def _build_shape_v2_from_user_data(
         return None
 
     shape = meta.get("shape")
-    chunk_shape = (
-        meta.get("chunk_grid", {})
-        .get("configuration", {})
-        .get("chunk_shape")
-    )
+    chunk_shape = meta.get("chunk_grid", {}).get("configuration", {}).get("chunk_shape")
     if not shape or not chunk_shape:
         return None
 
     offsets = []
-    for array_length, chunk_size in zip(shape, chunk_shape):
+    for array_length, chunk_size in zip(shape, chunk_shape, strict=False):
         num_chunks = math.ceil(array_length / chunk_size) if chunk_size > 0 else 0
         DimensionShapeV2Start(builder)
         DimensionShapeV2AddArrayLength(builder, array_length)
@@ -467,9 +446,7 @@ def _build_shape_v2_from_user_data(
     return offsets
 
 
-def _build_node_snapshot(
-    builder: flatbuffers.Builder, node: NodeWriteData
-) -> int:
+def _build_node_snapshot(builder: flatbuffers.Builder, node: NodeWriteData) -> int:
     """Build a NodeSnapshot table."""
     # Pre-build all sub-objects before starting the table.
     path_off = builder.CreateString(node.path)
@@ -530,9 +507,7 @@ def _build_manifest_file_info_v2(
 ) -> int:
     """Build a ManifestFileInfoV2 table."""
     ManifestFileInfoV2Start(builder)
-    ManifestFileInfoV2AddId(
-        builder, CreateObjectId12(builder, list(mf.manifest_id))
-    )
+    ManifestFileInfoV2AddId(builder, CreateObjectId12(builder, list(mf.manifest_id)))
     ManifestFileInfoV2AddSizeBytes(builder, mf.size_bytes)
     ManifestFileInfoV2AddNumChunkRefs(builder, mf.num_chunk_refs)
     return ManifestFileInfoV2End(builder)
@@ -570,8 +545,7 @@ def build_snapshot_payload(
 
     # ManifestFilesV2 vector (always write, even if empty)
     mf_offsets = [
-        _build_manifest_file_info_v2(builder, mf)
-        for mf in (manifest_files or [])
+        _build_manifest_file_info_v2(builder, mf) for mf in (manifest_files or [])
     ]
     SnapshotStartManifestFilesV2Vector(builder, len(mf_offsets))
     for off in reversed(mf_offsets):
@@ -729,16 +703,12 @@ def _build_ref(builder: flatbuffers.Builder, name: str, snapshot_index: int) -> 
     return RefEnd(builder)
 
 
-def _build_snapshot_info(
-    builder: flatbuffers.Builder, info: SnapshotInfoData
-) -> int:
+def _build_snapshot_info(builder: flatbuffers.Builder, info: SnapshotInfoData) -> int:
     """Build a SnapshotInfo table."""
     msg_off = builder.CreateString(info.message) if info.message else None
 
     SnapshotInfoStart(builder)
-    SnapshotInfoAddId(
-        builder, CreateObjectId12(builder, list(info.snapshot_id))
-    )
+    SnapshotInfoAddId(builder, CreateObjectId12(builder, list(info.snapshot_id)))
     SnapshotInfoAddParentOffset(builder, info.parent_offset)
     SnapshotInfoAddFlushedAt(builder, info.flushed_at)
     if msg_off is not None:
@@ -825,13 +795,9 @@ def build_repo_payload(
 
     # Build Ref tables for branches and tags (sorted by name)
     branch_offsets = [
-        _build_ref(builder, name, idx)
-        for name, idx in sorted(branches.items())
+        _build_ref(builder, name, idx) for name, idx in sorted(branches.items())
     ]
-    tag_offsets = [
-        _build_ref(builder, name, idx)
-        for name, idx in sorted(tags.items())
-    ]
+    tag_offsets = [_build_ref(builder, name, idx) for name, idx in sorted(tags.items())]
 
     # Build SnapshotInfo tables
     snap_offsets = [_build_snapshot_info(builder, s) for s in snapshots]

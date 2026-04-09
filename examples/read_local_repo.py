@@ -8,8 +8,9 @@
 
 from pathlib import Path
 
-import icepyck
 import zarr
+
+import icepyck
 
 # Resolve path relative to this script's parent (the project root)
 REPO_PATH = Path(__file__).resolve().parent.parent / "test-repos" / "basic"

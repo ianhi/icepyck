@@ -27,7 +27,7 @@ from icepyck.header import FileType, parse_bytes
 
 def _is_sorted(items: list) -> bool:  # type: ignore[type-arg]
     """Check if a list is sorted in O(n) without allocating a sorted copy."""
-    return all(a <= b for a, b in zip(items, items[1:]))
+    return all(a <= b for a, b in zip(items, items[1:], strict=False))
 
 
 @dataclass
@@ -61,7 +61,8 @@ def verify_repo(
     list[Issue]
         List of spec violations. Empty means the repo is conformant.
     """
-    from icepyck.storage import LocalStorage, Storage as StorageType
+    from icepyck.storage import LocalStorage
+    from icepyck.storage import Storage as StorageType
 
     if storage is None:
         store: StorageType = LocalStorage(str(path))
@@ -271,9 +272,7 @@ def _verify_snapshot_file(data: bytes, name: str) -> list[Issue]:
     return issues
 
 
-def _verify_node_snapshot(
-    fname: str, node_path: str, node: object
-) -> list[Issue]:
+def _verify_node_snapshot(fname: str, node_path: str, node: object) -> list[Issue]:
     """Verify a single NodeSnapshot within a snapshot."""
     issues: list[Issue] = []
     prefix = f"{node_path}"
@@ -295,9 +294,7 @@ def _verify_node_snapshot(
         arr.Init(array_data.Bytes, array_data.Pos)
 
         if arr.ShapeIsNone():
-            issues.append(
-                Issue(fname, f"{prefix}.shape", "required field is absent")
-            )
+            issues.append(Issue(fname, f"{prefix}.shape", "required field is absent"))
 
     return issues
 
@@ -343,9 +340,7 @@ def _verify_manifest_file(data: bytes, name: str) -> list[Issue]:
             if nid is not None:
                 node_ids.append(bytes(nid.Bytes()))
         if not _is_sorted(node_ids):
-            issues.append(
-                Issue(fname, "arrays", "not sorted by node_id")
-            )
+            issues.append(Issue(fname, "arrays", "not sorted by node_id"))
 
     return issues
 
@@ -394,9 +389,7 @@ def _verify_transaction_log_file(data: bytes, name: str) -> list[Issue]:
     ]
     for field_name, is_none_fn in required_vectors:
         if is_none_fn():
-            issues.append(
-                Issue(fname, field_name, "required field is absent")
-            )
+            issues.append(Issue(fname, field_name, "required field is absent"))
 
     return issues
 
@@ -472,7 +465,7 @@ def print_report(
             Text(" PASS ", style="bold white on green"),
             Text(f" {path}", style="bold"),
         )
-        console.print(f"  No spec violations found.", style="dim")
+        console.print("  No spec violations found.", style="dim")
         console.print()
         return
 
@@ -523,6 +516,7 @@ def main(argv: list[str] | None = None) -> int:
         path = Path(repo_path)
         if path.as_posix().startswith("s3://"):
             from icepyck.storage import S3Storage
+
             issues = verify_repo(path, storage=S3Storage(str(path)))
         else:
             issues = verify_repo(path)

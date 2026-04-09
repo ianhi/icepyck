@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class DimensionName(object):
-    __slots__ = ['_tab']
+
+class DimensionName:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class DimensionName(object):
     def GetRootAsDimensionName(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # DimensionName
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -31,20 +34,28 @@ class DimensionName(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
+
 def DimensionNameStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     DimensionNameStart(builder)
 
+
 def DimensionNameAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
+    )
+
 
 def AddName(builder, name):
     DimensionNameAddName(builder, name)
 
+
 def DimensionNameEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return DimensionNameEnd(builder)

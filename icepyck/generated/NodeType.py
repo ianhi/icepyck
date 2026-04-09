@@ -2,6 +2,7 @@
 
 # namespace: generated
 
-class NodeType(object):
+
+class NodeType:
     Group = 0
     Array = 1

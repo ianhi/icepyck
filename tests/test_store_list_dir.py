@@ -26,8 +26,10 @@ pytestmark = pytest.mark.skipif(
 
 def _list_dir_sync(store, prefix: str) -> list[str]:
     """Run list_dir synchronously and return sorted results."""
+
     async def _run():
         return [e async for e in store.list_dir(prefix)]
+
     return asyncio.run(_run())
 
 
@@ -119,4 +121,6 @@ class TestZarrGroupOpenAtSubPath:
         """All 2 arrays inside group1 should be discovered."""
         grp = zarr.open_group(store=basic_store, path="group1", mode="r")
         member_names = {name for name, _ in grp.members()}
-        assert len(member_names) == 2, f"Expected 2, got {len(member_names)}: {member_names}"
+        assert len(member_names) == 2, (
+            f"Expected 2, got {len(member_names)}: {member_names}"
+        )

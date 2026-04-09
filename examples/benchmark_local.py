@@ -7,13 +7,13 @@ import time
 import warnings
 from pathlib import Path
 
+import icechunk
 import numpy as np
 import xarray as xr
 import zarr
 from rich.console import Console
 from rich.table import Table
 
-import icechunk
 import icepyck
 
 warnings.filterwarnings("ignore")
@@ -37,9 +37,11 @@ console.print("[dim]Write complete.[/dim]\n")
 
 # ── Step 2: Open the same repo with both implementations ──────────────────────
 
+
 # Pre-open repos so open-repo benchmark starts cold each iteration
 def _pyck_open():
     return icepyck.open(REPO_PATH)
+
 
 def _ic_open():
     _storage = icechunk.local_filesystem_storage(str(REPO_PATH))
@@ -55,6 +57,7 @@ ic_repo = icechunk.Repository.open(ic_storage)
 def _pyck_session():
     return pyck_repo.readonly_session(branch="main")
 
+
 def _ic_session():
     return ic_repo.readonly_session(branch="main")
 
@@ -69,6 +72,7 @@ def _pyck_open_ds():
         pyck_sess.store, engine="zarr", chunks=None, consolidated=False
     )
 
+
 def _ic_open_ds():
     return xr.open_dataset(
         ic_sess.store, engine="zarr", chunks=None, consolidated=False
@@ -81,10 +85,9 @@ def _pyck_read_air():
     )
     return ds["air"].values
 
+
 def _ic_read_air():
-    ds = xr.open_dataset(
-        ic_sess.store, engine="zarr", chunks=None, consolidated=False
-    )
+    ds = xr.open_dataset(ic_sess.store, engine="zarr", chunks=None, consolidated=False)
     return ds["air"].values
 
 
@@ -92,12 +95,14 @@ def _pyck_read_chunk():
     root = zarr.open_group(store=pyck_sess.store, mode="r")
     return np.array(root["air"][0:730, 0:13, 0:27])
 
+
 def _ic_read_chunk():
     root = zarr.open_group(store=ic_sess.store, mode="r")
     return np.array(root["air"][0:730, 0:13, 0:27])
 
 
 # ── Step 3: Benchmark helper ──────────────────────────────────────────────────
+
 
 def bench(fn, n: int = 3) -> float:
     """Run fn n times, return median time in seconds."""
@@ -112,11 +117,11 @@ def bench(fn, n: int = 3) -> float:
 # ── Step 4: Run benchmarks and build table ────────────────────────────────────
 
 benchmarks = [
-    ("Open repo",         _pyck_open,       _ic_open),
-    ("Create session",    _pyck_session,     _ic_session),
-    ("xr.open_dataset",   _pyck_open_ds,     _ic_open_ds),
-    ("Read air[:] (31MB)", _pyck_read_air,   _ic_read_air),
-    ("Read 1 chunk",      _pyck_read_chunk,  _ic_read_chunk),
+    ("Open repo", _pyck_open, _ic_open),
+    ("Create session", _pyck_session, _ic_session),
+    ("xr.open_dataset", _pyck_open_ds, _ic_open_ds),
+    ("Read air[:] (31MB)", _pyck_read_air, _ic_read_air),
+    ("Read 1 chunk", _pyck_read_chunk, _ic_read_chunk),
 ]
 
 table = Table(title="🧊⛏️ Local benchmark (air_temperature, 31MB)")

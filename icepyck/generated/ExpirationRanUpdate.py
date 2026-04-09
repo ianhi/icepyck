@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ExpirationRanUpdate(object):
-    __slots__ = ['_tab']
+
+class ExpirationRanUpdate:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,18 +22,23 @@ class ExpirationRanUpdate(object):
     def GetRootAsExpirationRanUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # ExpirationRanUpdate
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
+
 def ExpirationRanUpdateStart(builder):
     builder.StartObject(0)
+
 
 def Start(builder):
     ExpirationRanUpdateStart(builder)
 
+
 def ExpirationRanUpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ExpirationRanUpdateEnd(builder)

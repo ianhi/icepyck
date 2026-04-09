@@ -65,8 +65,7 @@ class RepoInfo:
     def list_tags(self) -> list[str]:
         """Return the names of all tags."""
         return [
-            _decode(self._repo.Tags(i).Name())
-            for i in range(self._repo.TagsLength())
+            _decode(self._repo.Tags(i).Name()) for i in range(self._repo.TagsLength())
         ]
 
     def get_snapshot_id(self, branch_name: str) -> bytes:
@@ -102,7 +101,9 @@ class RepoInfo:
     def get_branches_data(self) -> dict[str, int]:
         """Return branch name -> snapshot index mapping."""
         return {
-            _decode(self._repo.Branches(i).Name()): self._repo.Branches(i).SnapshotIndex()
+            _decode(self._repo.Branches(i).Name()): self._repo.Branches(
+                i
+            ).SnapshotIndex()
             for i in range(self._repo.BranchesLength())
         }
 

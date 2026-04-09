@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ArrayManifest(object):
-    __slots__ = ['_tab']
+
+class ArrayManifest:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class ArrayManifest(object):
     def GetRootAsArrayManifest(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # ArrayManifest
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -30,6 +33,7 @@ class ArrayManifest(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId8 import ObjectId8
+
             obj = ObjectId8()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -43,6 +47,7 @@ class ArrayManifest(object):
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
             from icepyck.generated.ChunkRef import ChunkRef
+
             obj = ChunkRef()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -65,7 +70,10 @@ class ArrayManifest(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # ArrayManifest
@@ -87,44 +95,64 @@ class ArrayManifest(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         return o == 0
 
+
 def ArrayManifestStart(builder):
     builder.StartObject(3)
+
 
 def Start(builder):
     ArrayManifestStart(builder)
 
+
 def ArrayManifestAddNodeId(builder, nodeId):
-    builder.PrependStructSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(nodeId), 0)
+    builder.PrependStructSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(nodeId), 0
+    )
+
 
 def AddNodeId(builder, nodeId):
     ArrayManifestAddNodeId(builder, nodeId)
 
+
 def ArrayManifestAddRefs(builder, refs):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(refs), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(refs), 0
+    )
+
 
 def AddRefs(builder, refs):
     ArrayManifestAddRefs(builder, refs)
 
+
 def ArrayManifestStartRefsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartRefsVector(builder, numElems):
     return ArrayManifestStartRefsVector(builder, numElems)
 
+
 def ArrayManifestAddExtra(builder, extra):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(extra), 0
+    )
+
 
 def AddExtra(builder, extra):
     ArrayManifestAddExtra(builder, extra)
 
+
 def ArrayManifestStartExtraVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartExtraVector(builder, numElems):
     return ArrayManifestStartExtraVector(builder, numElems)
 
+
 def ArrayManifestEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ArrayManifestEnd(builder)

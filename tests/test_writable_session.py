@@ -12,12 +12,9 @@ import shutil
 from pathlib import Path
 
 import numpy as np
-import pytest
 import zarr
 
 import icepyck
-from icepyck.crockford import encode as crockford_encode
-from icepyck.storage import LocalStorage
 
 TEST_REPOS = Path(__file__).parent.parent / "test-repos"
 
@@ -45,39 +42,43 @@ class TestCommitNewArray:
         ws = repo.writable_session(branch="main")
 
         # Write root group metadata
-        root_meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "group",
-        }).encode()
+        root_meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "group",
+            }
+        ).encode()
         ws.set_metadata("/", root_meta)
 
         # Write array metadata
         arr_data = np.array([10.0, 20.0, 30.0, 40.0], dtype="<f8")
-        arr_meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [4],
-            "data_type": {"name": "float64", "configuration": {"endian": "little"}},
-            "chunk_grid": {
-                "name": "regular",
-                "configuration": {"chunk_shape": [4]},
-            },
-            "chunk_key_encoding": {
-                "name": "default",
-                "configuration": {"separator": "/"},
-            },
-            "fill_value": 0.0,
-            "codecs": [
-                {"name": "bytes", "configuration": {"endian": "little"}},
-            ],
-        }).encode()
+        arr_meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [4],
+                "data_type": {"name": "float64", "configuration": {"endian": "little"}},
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [4]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                ],
+            }
+        ).encode()
         ws.set_metadata("/new_array", arr_meta)
 
         # Write chunk data (raw little-endian float64 bytes)
         ws.set_chunk("/new_array", (0,), arr_data.tobytes())
 
         # Commit
-        new_snapshot_id = ws.commit("Added new_array with test data")
+        _new_snapshot_id = ws.commit("Added new_array with test data")
 
         # --- Read back through icepyck ---
         # Re-open the repo (fresh, no caching from previous open)
@@ -104,24 +105,26 @@ class TestCommitNewArray:
         ws = repo.writable_session(branch="main")
 
         arr_data = np.arange(12, dtype="<f4").reshape(3, 4)
-        arr_meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [3, 4],
-            "data_type": "float32",
-            "chunk_grid": {
-                "name": "regular",
-                "configuration": {"chunk_shape": [3, 4]},
-            },
-            "chunk_key_encoding": {
-                "name": "default",
-                "configuration": {"separator": "/"},
-            },
-            "fill_value": 0.0,
-            "codecs": [
-                {"name": "bytes", "configuration": {"endian": "little"}},
-            ],
-        }).encode()
+        arr_meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [3, 4],
+                "data_type": "float32",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [3, 4]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                ],
+            }
+        ).encode()
         ws.set_metadata("/matrix", arr_meta)
         ws.set_chunk("/matrix", (0, 0), arr_data.tobytes())
         ws.commit("Added 3x4 matrix")
@@ -156,9 +159,15 @@ class TestTimeTravelAfterCommit:
 
         # Commit a change
         ws = repo.writable_session(branch="main")
-        ws.set_metadata("/added_group", json.dumps({
-            "zarr_format": 3, "node_type": "group",
-        }).encode())
+        ws.set_metadata(
+            "/added_group",
+            json.dumps(
+                {
+                    "zarr_format": 3,
+                    "node_type": "group",
+                }
+            ).encode(),
+        )
         new_snap_id = ws.commit("Added a group")
         assert new_snap_id != old_snap_id
 
@@ -196,33 +205,65 @@ class TestMultipleCommits:
 
         # First commit: add array A
         a_data = np.array([1, 2, 3], dtype="<i4")
-        ws.set_metadata("/arr_a", json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [3],
-            "data_type": {"name": "int32", "configuration": {"endian": "little"}},
-            "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [3]}},
-            "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
-            "fill_value": 0,
-            "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
-        }).encode())
+        ws.set_metadata(
+            "/arr_a",
+            json.dumps(
+                {
+                    "zarr_format": 3,
+                    "node_type": "array",
+                    "shape": [3],
+                    "data_type": {
+                        "name": "int32",
+                        "configuration": {"endian": "little"},
+                    },
+                    "chunk_grid": {
+                        "name": "regular",
+                        "configuration": {"chunk_shape": [3]},
+                    },
+                    "chunk_key_encoding": {
+                        "name": "default",
+                        "configuration": {"separator": "/"},
+                    },
+                    "fill_value": 0,
+                    "codecs": [
+                        {"name": "bytes", "configuration": {"endian": "little"}}
+                    ],
+                }
+            ).encode(),
+        )
         ws.set_chunk("/arr_a", (0,), a_data.tobytes())
         snap1 = ws.commit("Added arr_a")
 
         # Second commit: add array B
         b_data = np.array([100, 200], dtype="<i4")
-        ws.set_metadata("/arr_b", json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [2],
-            "data_type": {"name": "int32", "configuration": {"endian": "little"}},
-            "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [2]}},
-            "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
-            "fill_value": 0,
-            "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
-        }).encode())
+        ws.set_metadata(
+            "/arr_b",
+            json.dumps(
+                {
+                    "zarr_format": 3,
+                    "node_type": "array",
+                    "shape": [2],
+                    "data_type": {
+                        "name": "int32",
+                        "configuration": {"endian": "little"},
+                    },
+                    "chunk_grid": {
+                        "name": "regular",
+                        "configuration": {"chunk_shape": [2]},
+                    },
+                    "chunk_key_encoding": {
+                        "name": "default",
+                        "configuration": {"separator": "/"},
+                    },
+                    "fill_value": 0,
+                    "codecs": [
+                        {"name": "bytes", "configuration": {"endian": "little"}}
+                    ],
+                }
+            ).encode(),
+        )
         ws.set_chunk("/arr_b", (0,), b_data.tobytes())
-        snap2 = ws.commit("Added arr_b")
+        _snap2 = ws.commit("Added arr_b")
 
         # Verify: snap2 (main) has both arrays
         repo2 = icepyck.open(repo_path)
@@ -233,13 +274,9 @@ class TestMultipleCommits:
 
         # Verify data
         chunk_a = repo2.read_chunk("main", "/arr_a", (0,))
-        np.testing.assert_array_equal(
-            np.frombuffer(chunk_a, dtype="<i4"), a_data
-        )
+        np.testing.assert_array_equal(np.frombuffer(chunk_a, dtype="<i4"), a_data)
         chunk_b = repo2.read_chunk("main", "/arr_b", (0,))
-        np.testing.assert_array_equal(
-            np.frombuffer(chunk_b, dtype="<i4"), b_data
-        )
+        np.testing.assert_array_equal(np.frombuffer(chunk_b, dtype="<i4"), b_data)
 
         # Time travel: snap1 has arr_a but NOT arr_b
         session1 = repo2.readonly_session(snapshot=snap1)
@@ -259,16 +296,24 @@ class TestOverwriteExistingChunks:
         ws = repo.writable_session(branch="main")
 
         # Create array with two chunks
-        meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [8],
-            "data_type": {"name": "float64", "configuration": {"endian": "little"}},
-            "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [4]}},
-            "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
-            "fill_value": 0.0,
-            "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
-        }).encode()
+        meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [8],
+                "data_type": {"name": "float64", "configuration": {"endian": "little"}},
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [4]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
+            }
+        ).encode()
         ws.set_metadata("/multi", meta)
 
         chunk0 = np.array([1.0, 2.0, 3.0, 4.0], dtype="<f8").tobytes()
@@ -280,7 +325,7 @@ class TestOverwriteExistingChunks:
         # Overwrite only chunk 0
         new_chunk0 = np.array([10.0, 20.0, 30.0, 40.0], dtype="<f8").tobytes()
         ws.set_chunk("/multi", (0,), new_chunk0)
-        snap2 = ws.commit("Overwrote chunk 0")
+        _snap2 = ws.commit("Overwrote chunk 0")
 
         # Verify: chunk 0 has new data, chunk 1 is preserved
         repo2 = icepyck.open(repo_path)

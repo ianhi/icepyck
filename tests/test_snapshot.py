@@ -1,10 +1,11 @@
 """Tests for SnapshotReader: nodes, types, and manifest refs."""
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from icepyck.repo import RepoInfo
-from icepyck.snapshot import SnapshotReader, NodeInfo
+from icepyck.snapshot import SnapshotReader
 
 BASIC_REPO = Path(__file__).parent.parent / "test-repos" / "basic"
 NESTED_REPO = Path(__file__).parent.parent / "test-repos" / "nested"

@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 import icepyck
-from icepyck.verify import Issue, verify_repo
+from icepyck.verify import verify_repo
 
 
 class TestVerifyIcepyckRepos:
@@ -30,24 +30,26 @@ class TestVerifyIcepyckRepos:
         repo = icepyck.Repository.init(repo_path)
         ws = repo.writable_session(branch="main")
 
-        meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [10],
-            "data_type": "float64",
-            "chunk_grid": {
-                "name": "regular",
-                "configuration": {"chunk_shape": [5]},
-            },
-            "chunk_key_encoding": {
-                "name": "default",
-                "configuration": {"separator": "/"},
-            },
-            "fill_value": 0.0,
-            "codecs": [
-                {"name": "bytes", "configuration": {"endian": "little"}},
-            ],
-        }).encode()
+        meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [10],
+                "data_type": "float64",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [5]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0.0,
+                "codecs": [
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                ],
+            }
+        ).encode()
         ws.set_metadata("/data", meta)
         ws.set_chunk("/data", (0,), np.zeros(5, dtype="<f8").tobytes())
         ws.set_chunk("/data", (1,), np.ones(5, dtype="<f8").tobytes())
@@ -61,24 +63,26 @@ class TestVerifyIcepyckRepos:
         repo = icepyck.Repository.init(repo_path)
         ws = repo.writable_session(branch="main")
 
-        meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "array",
-            "shape": [4],
-            "data_type": "int32",
-            "chunk_grid": {
-                "name": "regular",
-                "configuration": {"chunk_shape": [4]},
-            },
-            "chunk_key_encoding": {
-                "name": "default",
-                "configuration": {"separator": "/"},
-            },
-            "fill_value": 0,
-            "codecs": [
-                {"name": "bytes", "configuration": {"endian": "little"}},
-            ],
-        }).encode()
+        meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "array",
+                "shape": [4],
+                "data_type": "int32",
+                "chunk_grid": {
+                    "name": "regular",
+                    "configuration": {"chunk_shape": [4]},
+                },
+                "chunk_key_encoding": {
+                    "name": "default",
+                    "configuration": {"separator": "/"},
+                },
+                "fill_value": 0,
+                "codecs": [
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                ],
+            }
+        ).encode()
         ws.set_metadata("/arr", meta)
         ws.set_chunk("/arr", (0,), np.array([1, 2, 3, 4], dtype="<i4").tobytes())
         ws.commit("Commit 1")
@@ -95,24 +99,26 @@ class TestVerifyIcepyckRepos:
         ws = repo.writable_session(branch="main")
 
         for name in ["alpha", "beta", "gamma"]:
-            meta = json.dumps({
-                "zarr_format": 3,
-                "node_type": "array",
-                "shape": [3],
-                "data_type": "float32",
-                "chunk_grid": {
-                    "name": "regular",
-                    "configuration": {"chunk_shape": [3]},
-                },
-                "chunk_key_encoding": {
-                    "name": "default",
-                    "configuration": {"separator": "/"},
-                },
-                "fill_value": 0.0,
-                "codecs": [
-                    {"name": "bytes", "configuration": {"endian": "little"}},
-                ],
-            }).encode()
+            meta = json.dumps(
+                {
+                    "zarr_format": 3,
+                    "node_type": "array",
+                    "shape": [3],
+                    "data_type": "float32",
+                    "chunk_grid": {
+                        "name": "regular",
+                        "configuration": {"chunk_shape": [3]},
+                    },
+                    "chunk_key_encoding": {
+                        "name": "default",
+                        "configuration": {"separator": "/"},
+                    },
+                    "fill_value": 0.0,
+                    "codecs": [
+                        {"name": "bytes", "configuration": {"endian": "little"}},
+                    ],
+                }
+            ).encode()
             ws.set_metadata(f"/{name}", meta)
             ws.set_chunk(f"/{name}", (0,), np.zeros(3, dtype="<f4").tobytes())
 

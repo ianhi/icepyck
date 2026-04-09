@@ -7,6 +7,7 @@ This module contains the main user-facing API: :func:`open`,
 from __future__ import annotations
 
 import json
+from datetime import UTC
 from pathlib import Path
 
 from icepyck.chunks import read_chunk
@@ -17,7 +18,6 @@ from icepyck.snapshot import NodeInfo, SnapshotReader
 from icepyck.storage import LocalStorage, S3Storage, Storage
 from icepyck.store import IcechunkReadStore
 from icepyck.writers import UpdateData
-
 
 _INITIAL_SNAPSHOT_ID = bytes.fromhex("0b1cc8d6787580f0e33a6534")
 """Well-known ID for the initial empty snapshot (1CECHNKREP0F1RSTCMT0)."""
@@ -52,8 +52,7 @@ def open(
                 f"repository. icepyck only supports V2 repositories."
             )
         raise FileNotFoundError(
-            f"No 'repo' file found at {path_str!r}. "
-            f"Is this an Icechunk repository?"
+            f"No 'repo' file found at {path_str!r}. Is this an Icechunk repository?"
         )
     return Repository(storage=storage)
 
@@ -147,7 +146,7 @@ class Repository:
         path: str | Path,
         *,
         storage: Storage | None = None,
-    ) -> "Repository":
+    ) -> Repository:
         """Initialize a new empty Icechunk repository.
 
         Creates the initial empty snapshot and repo file with a ``main``
@@ -166,10 +165,12 @@ class Repository:
         snapshot_id = _INITIAL_SNAPSHOT_ID
         flushed_at = int(__import__("time").time() * 1_000_000)
 
-        root_meta = json.dumps({
-            "zarr_format": 3,
-            "node_type": "group",
-        }).encode()
+        root_meta = json.dumps(
+            {
+                "zarr_format": 3,
+                "node_type": "group",
+            }
+        ).encode()
         from icepyck.ids import generate_id8
 
         root_node_id = generate_id8()
@@ -188,9 +189,7 @@ class Repository:
         )
         from icepyck.crockford import encode as crockford_encode
 
-        storage.write(
-            f"snapshots/{crockford_encode(snapshot_id)}", snapshot_bytes
-        )
+        storage.write(f"snapshots/{crockford_encode(snapshot_id)}", snapshot_bytes)
 
         repo_bytes = build_repo(
             spec_version=2,
@@ -297,7 +296,7 @@ class Repository:
 
         Each entry has keys: ``id``, ``parent``, ``message``, ``time``.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from icepyck.crockford import encode as crockford_encode
 
@@ -313,15 +312,17 @@ class Repository:
         while idx >= 0 and idx not in visited:
             visited.add(idx)
             sid, parent_offset, flushed_at, message = snapshots[idx]
-            ts = datetime.fromtimestamp(
-                flushed_at / 1_000_000, tz=timezone.utc
+            ts = datetime.fromtimestamp(flushed_at / 1_000_000, tz=UTC)
+            result.append(
+                {
+                    "id": crockford_encode(sid),
+                    "parent": crockford_encode(snapshots[parent_offset][0])
+                    if parent_offset >= 0
+                    else None,
+                    "message": message,
+                    "time": ts.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                }
             )
-            result.append({
-                "id": crockford_encode(sid),
-                "parent": crockford_encode(snapshots[parent_offset][0]) if parent_offset >= 0 else None,
-                "message": message,
-                "time": ts.strftime("%Y-%m-%d %H:%M:%S UTC"),
-            })
             idx = parent_offset
         return result
 
@@ -491,10 +492,13 @@ class Repository:
         except (ValueError, KeyError):
             pass
         ref_upper = ref.upper()
-        if ref_upper and all(c in "0123456789ABCDEFGHJKMNPQRSTVWXYZ" for c in ref_upper):
+        if ref_upper and all(
+            c in "0123456789ABCDEFGHJKMNPQRSTVWXYZ" for c in ref_upper
+        ):
             all_ids = self._repo.get_snapshots_data()
             matches = [
-                sid for sid, _, _, _ in all_ids
+                sid
+                for sid, _, _, _ in all_ids
                 if crockford_encode(sid).startswith(ref_upper)
             ]
             if len(matches) == 1:
@@ -525,9 +529,13 @@ class Repository:
         if self._storage is None:
             raise TypeError("Writing requires a storage backend")
 
-        repo_branches = branches if branches is not None else self._repo.get_branches_data()
+        repo_branches = (
+            branches if branches is not None else self._repo.get_branches_data()
+        )
         repo_tags = tags if tags is not None else self._repo.get_tags_data()
-        repo_deleted_tags = deleted_tags if deleted_tags is not None else self._repo.get_deleted_tags()
+        repo_deleted_tags = (
+            deleted_tags if deleted_tags is not None else self._repo.get_deleted_tags()
+        )
         snapshots = self._repo.get_snapshots_data()
 
         repo_bytes = build_repo(
@@ -589,6 +597,4 @@ class Repository:
                 if cref.index == chunk_index:
                     return cref
 
-        raise KeyError(
-            f"Chunk {chunk_index} not found for array {array_path!r}"
-        )
+        raise KeyError(f"Chunk {chunk_index} not found for array {array_path!r}")

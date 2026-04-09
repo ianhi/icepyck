@@ -2,7 +2,8 @@
 
 # namespace: generated
 
-class NodeData(object):
+
+class NodeData:
     NONE = 0
     Array = 1
     Group = 2

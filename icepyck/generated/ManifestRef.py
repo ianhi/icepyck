@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class ManifestRef(object):
-    __slots__ = ['_tab']
+
+class ManifestRef:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class ManifestRef(object):
     def GetRootAsManifestRef(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # ManifestRef
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -30,6 +33,7 @@ class ManifestRef(object):
         if o != 0:
             x = o + self._tab.Pos
             from icepyck.generated.ObjectId12 import ObjectId12
+
             obj = ObjectId12()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -42,6 +46,7 @@ class ManifestRef(object):
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 8
             from icepyck.generated.ChunkIndexRange import ChunkIndexRange
+
             obj = ChunkIndexRange()
             obj.Init(self._tab.Bytes, x)
             return obj
@@ -59,32 +64,46 @@ class ManifestRef(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         return o == 0
 
+
 def ManifestRefStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     ManifestRefStart(builder)
 
+
 def ManifestRefAddObjectId(builder, objectId):
-    builder.PrependStructSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(objectId), 0)
+    builder.PrependStructSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(objectId), 0
+    )
+
 
 def AddObjectId(builder, objectId):
     ManifestRefAddObjectId(builder, objectId)
 
+
 def ManifestRefAddExtents(builder, extents):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(extents), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(extents), 0
+    )
+
 
 def AddExtents(builder, extents):
     ManifestRefAddExtents(builder, extents)
 
+
 def ManifestRefStartExtentsVector(builder, numElems):
     return builder.StartVector(8, numElems, 4)
+
 
 def StartExtentsVector(builder, numElems):
     return ManifestRefStartExtentsVector(builder, numElems)
 
+
 def ManifestRefEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ManifestRefEnd(builder)

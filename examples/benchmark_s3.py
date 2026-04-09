@@ -20,7 +20,6 @@ Measures wall time and (for icepyck) counts sequential S3 GETs.
 On S3, wall time ≈ (sequential GETs) × latency per GET.
 """
 
-import sys
 import time
 import warnings
 
@@ -65,9 +64,12 @@ def bench_icepyck() -> list[tuple[str, int, float]]:
 
     s.reset()
     t0 = time.perf_counter()
-    ds = xr.open_dataset(
-        session.store, group=GROUP, engine="zarr",
-        chunks=None, consolidated=False,
+    _ds = xr.open_dataset(
+        session.store,
+        group=GROUP,
+        engine="zarr",
+        chunks=None,
+        consolidated=False,
     )
     results.append(("xr.open_dataset", s.n, time.perf_counter() - t0))
 
@@ -98,9 +100,12 @@ def bench_icechunk() -> list[tuple[str, int, float]]:
     results.append(("Open + session", -1, time.perf_counter() - t0))
 
     t0 = time.perf_counter()
-    ds = xr.open_dataset(
-        session.store, group=GROUP, engine="zarr",
-        chunks=None, consolidated=False,
+    _ds = xr.open_dataset(
+        session.store,
+        group=GROUP,
+        engine="zarr",
+        chunks=None,
+        consolidated=False,
     )
     results.append(("xr.open_dataset", -1, time.perf_counter() - t0))
 
@@ -129,14 +134,13 @@ for (label, gets, t_pyck), (_, _, t_ic) in zip(pyck, ic, strict=True):
     color = "green" if ratio <= 1 else "yellow" if ratio <= 2 else "red"
     table.add_row(
         label,
-        f"{t_pyck*1000:.0f} ms",
-        f"{t_ic*1000:.0f} ms [{color}]({ratio:.1f}x)[/]",
+        f"{t_pyck * 1000:.0f} ms",
+        f"{t_ic * 1000:.0f} ms [{color}]({ratio:.1f}x)[/]",
         str(gets) if gets >= 0 else "?",
     )
 
 console.print()
 console.print(table)
 console.print(
-    "\n[dim]ratio = icepyck/icechunk. "
-    "<1 = icepyck faster. >1 = icechunk faster.[/dim]"
+    "\n[dim]ratio = icepyck/icechunk. <1 = icepyck faster. >1 = icechunk faster.[/dim]"
 )

@@ -1,10 +1,11 @@
 """Tests for read_chunk: inline and native chunk reading."""
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from icepyck.chunks import read_chunk
-from icepyck.manifest import ManifestReader, ChunkType, ChunkRefInfo
+from icepyck.manifest import ChunkRefInfo, ChunkType, ManifestReader
 from icepyck.repo import RepoInfo
 from icepyck.snapshot import SnapshotReader
 

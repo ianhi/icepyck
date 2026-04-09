@@ -63,9 +63,7 @@ def _manifest_changed_extents(
     return changed
 
 
-def _open_repo(
-    repo_path: str | Path, anon: bool = False
-) -> tuple[RepoInfo, Storage]:
+def _open_repo(repo_path: str | Path, anon: bool = False) -> tuple[RepoInfo, Storage]:
     """Open a repo returning (RepoInfo, storage).
 
     Handles both local paths and ``s3://`` URLs.
@@ -190,10 +188,13 @@ def diff_snapshots(
         chunks_changed = False
         changed_extents: list[tuple[int, int]] = []
 
-        if old_node.node_type == "array" and new_node.node_type == "array":
-            if old_node.manifest_refs != new_node.manifest_refs:
-                changed_extents = _manifest_changed_extents(old_node, new_node)
-                chunks_changed = bool(changed_extents)
+        if (
+            old_node.node_type == "array"
+            and new_node.node_type == "array"
+            and old_node.manifest_refs != new_node.manifest_refs
+        ):
+            changed_extents = _manifest_changed_extents(old_node, new_node)
+            chunks_changed = bool(changed_extents)
 
         if metadata_changed or chunks_changed:
             diff.modified_nodes.append(
@@ -252,9 +253,7 @@ def _resolve_ref(repo: RepoInfo, ref: str) -> bytes:
     raise KeyError(f"Could not resolve ref: {ref!r}")
 
 
-def _resolve_crockford_prefix(
-    repo: RepoInfo, prefix: str
-) -> bytes | None:
+def _resolve_crockford_prefix(repo: RepoInfo, prefix: str) -> bytes | None:
     """Match a Crockford Base32 prefix against known snapshot IDs."""
     from icepyck.crockford import encode as crockford_encode
 
@@ -267,10 +266,7 @@ def _resolve_crockford_prefix(
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
-        raise KeyError(
-            f"Ambiguous ref {prefix!r}: matches "
-            f"{len(matches)} snapshots"
-        )
+        raise KeyError(f"Ambiguous ref {prefix!r}: matches {len(matches)} snapshots")
     return None
 
 
@@ -300,9 +296,7 @@ def _get_ancestor(repo: RepoInfo, snapshot_id: bytes, generations: int) -> bytes
                 f"Snapshot {current_id.hex()} has no parent (initial commit)"
             )
         if parent_idx >= len(repo._snapshot_ids):
-            raise KeyError(
-                f"Parent index {parent_idx} is out of range"
-            )
+            raise KeyError(f"Parent index {parent_idx} is out of range")
         current_id = repo._snapshot_ids[parent_idx]
 
     return current_id

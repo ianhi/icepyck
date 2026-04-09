@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
-class Update(object):
-    __slots__ = ['_tab']
+
+class Update:
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,6 +22,7 @@ class Update(object):
     def GetRootAsUpdate(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     # Update
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -36,6 +39,7 @@ class Update(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             from flatbuffers.table import Table
+
             obj = Table(bytearray(), 0)
             self._tab.Union(obj, o)
             return obj
@@ -45,7 +49,9 @@ class Update(object):
     def UpdatedAt(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # Update
@@ -55,38 +61,54 @@ class Update(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
+
 def UpdateStart(builder):
     builder.StartObject(4)
+
 
 def Start(builder):
     UpdateStart(builder)
 
+
 def UpdateAddUpdateTypeType(builder, updateTypeType):
     builder.PrependUint8Slot(0, updateTypeType, 0)
+
 
 def AddUpdateTypeType(builder, updateTypeType):
     UpdateAddUpdateTypeType(builder, updateTypeType)
 
+
 def UpdateAddUpdateType(builder, updateType):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(updateType), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(updateType), 0
+    )
+
 
 def AddUpdateType(builder, updateType):
     UpdateAddUpdateType(builder, updateType)
 
+
 def UpdateAddUpdatedAt(builder, updatedAt):
     builder.PrependUint64Slot(2, updatedAt, 0)
+
 
 def AddUpdatedAt(builder, updatedAt):
     UpdateAddUpdatedAt(builder, updatedAt)
 
+
 def UpdateAddBackupPath(builder, backupPath):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(backupPath), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(backupPath), 0
+    )
+
 
 def AddBackupPath(builder, backupPath):
     UpdateAddBackupPath(builder, backupPath)
 
+
 def UpdateEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return UpdateEnd(builder)

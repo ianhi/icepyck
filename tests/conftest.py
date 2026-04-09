@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 TEST_REPOS_DIR = Path(__file__).parent.parent / "test-repos"
 
