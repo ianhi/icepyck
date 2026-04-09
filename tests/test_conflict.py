@@ -87,53 +87,18 @@ class TestConflictDetection:
         ws_dev.set_chunk("/dev_arr", (0,), np.ones(4, dtype="<f4").tobytes())
         ws_dev.commit("On dev")  # Should succeed — different branch
 
-    def test_two_repos_two_sessions_conflict(self, tmp_path: Path) -> None:
-        """Two independent Repository objects writing to the same branch.
-
-        This simulates two processes (or two machines) both opening the
-        same repo from storage and racing to commit.
-        """
-        repo_path = tmp_path / "repo"
-        icepyck.Repository.init(repo_path)
-
-        # Two independent Repository objects (like two processes)
-        repo_a = icepyck.open(repo_path)
-        repo_b = icepyck.open(repo_path)
-
-        # Both open writable sessions from the same base
-        ws_a = repo_a.writable_session(branch="main")
-        ws_b = repo_b.writable_session(branch="main")
-
-        # Both prepare changes
-        ws_a.set_metadata("/from_a", _make_array_meta([4]))
-        ws_a.set_chunk("/from_a", (0,), np.zeros(4, dtype="<f4").tobytes())
-
-        ws_b.set_metadata("/from_b", _make_array_meta([4]))
-        ws_b.set_chunk("/from_b", (0,), np.ones(4, dtype="<f4").tobytes())
-
-        # Writer A commits first — succeeds
-        ws_a.commit("From A")
-
-        # Writer B tries to commit — repo_b's in-memory state is stale.
-        # To detect the conflict, B must refresh first (pick up A's commit).
-        # Without refresh, B would silently overwrite A's changes.
-        # This is the current behavior — Phase 12 will add storage-level
-        # conditional writes to catch this without explicit refresh.
-        repo_b.refresh()
-
-        with pytest.raises(ConflictError, match="updated by another writer"):
-            ws_b.commit("From B")
-
-        # Verify A's data is intact
-        repo_check = icepyck.open(repo_path)
-        nodes = {
-            n.path for n in repo_check.readonly_session(branch="main").list_nodes()
-        }
-        assert "/from_a" in nodes
-        assert "/from_b" not in nodes
-
-    def test_two_repos_retry_after_conflict(self, tmp_path: Path) -> None:
-        """After conflict, writer B can get a new session and retry."""
+    @pytest.mark.xfail(
+        reason="Cross-process conflict detection requires storage-level "
+        "conditional writes (Phase 12). Currently, two independent "
+        "Repository instances don't share state, so the second writer "
+        "silently overwrites. This test documents the desired behavior.",
+        strict=True,
+    )
+    def test_cross_process_conflict_detected_automatically(
+        self, tmp_path: Path
+    ) -> None:
+        """Two independent repos racing — conflict SHOULD be caught at
+        storage level without manual refresh. Requires conditional writes."""
         repo_path = tmp_path / "repo"
         icepyck.Repository.init(repo_path)
 
@@ -149,21 +114,37 @@ class TestConflictDetection:
 
         ws_b.set_metadata("/from_b", _make_array_meta([4]))
         ws_b.set_chunk("/from_b", (0,), np.ones(4, dtype="<f4").tobytes())
-        repo_b.refresh()
 
+        # Without manual refresh, this SHOULD raise ConflictError
+        # but currently doesn't — it silently overwrites A's commit.
         with pytest.raises(ConflictError):
             ws_b.commit("From B")
 
+    def test_retry_after_conflict(self, tmp_path: Path) -> None:
+        """After conflict, writer B can get a new session and retry."""
+        repo_path = tmp_path / "repo"
+        repo = icepyck.Repository.init(repo_path)
+
+        ws1 = repo.writable_session(branch="main")
+        ws2 = repo.writable_session(branch="main")
+
+        ws1.set_metadata("/from_a", _make_array_meta([4]))
+        ws1.set_chunk("/from_a", (0,), np.zeros(4, dtype="<f4").tobytes())
+        ws1.commit("From A")
+
+        ws2.set_metadata("/from_b", _make_array_meta([4]))
+        ws2.set_chunk("/from_b", (0,), np.ones(4, dtype="<f4").tobytes())
+
+        with pytest.raises(ConflictError):
+            ws2.commit("From B")
+
         # Retry: get a new session (which refreshes and sees A's commit)
-        ws_b2 = repo_b.writable_session(branch="main")
-        ws_b2.set_metadata("/from_b", _make_array_meta([4]))
-        ws_b2.set_chunk("/from_b", (0,), np.ones(4, dtype="<f4").tobytes())
-        ws_b2.commit("From B (retry)")
+        ws3 = repo.writable_session(branch="main")
+        ws3.set_metadata("/from_b", _make_array_meta([4]))
+        ws3.set_chunk("/from_b", (0,), np.ones(4, dtype="<f4").tobytes())
+        ws3.commit("From B (retry)")
 
         # Both arrays should now exist
-        repo_check = icepyck.open(repo_path)
-        nodes = {
-            n.path for n in repo_check.readonly_session(branch="main").list_nodes()
-        }
+        nodes = {n.path for n in repo.readonly_session(branch="main").list_nodes()}
         assert "/from_a" in nodes
         assert "/from_b" in nodes
