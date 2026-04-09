@@ -19,6 +19,11 @@ from icepyck.storage import LocalStorage, S3Storage, Storage
 from icepyck.store import IcechunkReadStore
 from icepyck.writers import SnapshotInfoData, UpdateData
 
+
+class ConflictError(Exception):
+    """Raised when a commit conflicts with another writer's changes."""
+
+
 _INITIAL_SNAPSHOT_ID = bytes.fromhex("0b1cc8d6787580f0e33a6534")
 """Well-known ID for the initial empty snapshot (1CECHNKREP0F1RSTCMT0)."""
 
@@ -449,12 +454,28 @@ class Repository:
         """Apply a commit: update in-memory state and flush repo file.
 
         Called by WritableSession.commit(). Accepts a CommitResult.
-        Not part of the public API.
+        Raises ConflictError if the branch has been updated since the
+        session was created (another writer committed first).
         """
         from icepyck.session import CommitResult
 
         if not isinstance(result, CommitResult):
             raise TypeError(f"Expected CommitResult, got {type(result)}")
+
+        # Conflict detection: verify the branch still points to the
+        # expected parent snapshot. If it's moved, another writer committed.
+        current_branch_idx = self._state.branches.get(result.branch)
+        if current_branch_idx is not None:
+            current_snap_id = self._state.snapshots[current_branch_idx].snapshot_id
+            if current_snap_id != result.parent_snapshot_id:
+                from icepyck.crockford import encode as crockford_encode
+
+                raise ConflictError(
+                    f"Branch {result.branch!r} was updated by another writer. "
+                    f"Expected parent {crockford_encode(result.parent_snapshot_id)}, "
+                    f"but branch now points to {crockford_encode(current_snap_id)}. "
+                    f"Call repo.refresh() and retry."
+                )
 
         parent_idx = self._state.find_snapshot_index(result.parent_snapshot_id)
         new_snap = SnapshotInfoData(
