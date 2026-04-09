@@ -478,6 +478,13 @@ class Repository:
                 )
 
         parent_idx = self._state.find_snapshot_index(result.parent_snapshot_id)
+        if parent_idx < 0:
+            from icepyck.crockford import encode as crockford_encode
+
+            raise RuntimeError(
+                f"Parent snapshot {crockford_encode(result.parent_snapshot_id)} "
+                f"not found in repository snapshot list"
+            )
         new_snap = SnapshotInfoData(
             snapshot_id=result.snapshot_id,
             parent_offset=parent_idx,

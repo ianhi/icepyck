@@ -305,6 +305,10 @@ class WritableSession:
         self._pending_chunks.clear()
         self._modified_metadata.clear()
 
+        # Invalidate cached read store (it points to the old snapshot)
+        if self._store is not None:
+            self._store._read_store = None  # type: ignore[attr-defined]
+
         return crockford_encode(snapshot_id)
 
     # ------------------------------------------------------------------
