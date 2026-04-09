@@ -277,6 +277,10 @@ class Repository:
         Changes are buffered in memory until
         :meth:`WritableSession.commit` is called.
         """
+        # Re-read repo state to pick up any commits since we last read
+        if self._storage is not None:
+            self._repo = RepoInfo(storage=self._storage)
+            self._snapshot_cache.clear()
         snapshot_id = self._resolve_ref(branch)
         snap = self._get_snapshot_by_id(snapshot_id)
         if self._storage is None:
@@ -330,8 +334,15 @@ class Repository:
     # Branch & tag management
     # ------------------------------------------------------------------
 
+    def _refresh(self) -> None:
+        """Re-read repo file from storage to pick up external changes."""
+        if self._storage is not None:
+            self._repo = RepoInfo(storage=self._storage)
+            self._snapshot_cache.clear()
+
     def create_branch(self, name: str, snapshot: str) -> None:
         """Create a new branch pointing to the given snapshot."""
+        self._refresh()
         if "/" in name:
             raise ValueError("Branch names must not contain '/'")
         branches = self._repo.get_branches_data()
@@ -353,6 +364,7 @@ class Repository:
 
     def delete_branch(self, name: str) -> None:
         """Delete a branch. Cannot delete ``"main"``."""
+        self._refresh()
         if name == "main":
             raise ValueError("Cannot delete the 'main' branch")
         branches = self._repo.get_branches_data()
@@ -374,6 +386,7 @@ class Repository:
 
     def create_tag(self, name: str, snapshot: str) -> None:
         """Create an immutable tag pointing to the given snapshot."""
+        self._refresh()
         if "/" in name:
             raise ValueError("Tag names must not contain '/'")
         tags = self._repo.get_tags_data()
@@ -400,6 +413,7 @@ class Repository:
 
     def delete_tag(self, name: str) -> None:
         """Delete a tag (tombstoned — name cannot be reused)."""
+        self._refresh()
         tags = self._repo.get_tags_data()
         if name not in tags:
             raise KeyError(f"Tag not found: {name!r}")
@@ -528,6 +542,10 @@ class Repository:
 
         if self._storage is None:
             raise TypeError("Writing requires a storage backend")
+
+        # Re-read current repo state (may have been updated by a WritableSession)
+        self._repo = RepoInfo(storage=self._storage)
+        self._snapshot_cache.clear()
 
         repo_branches = (
             branches if branches is not None else self._repo.get_branches_data()
