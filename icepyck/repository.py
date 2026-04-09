@@ -12,7 +12,6 @@ from pathlib import Path
 
 from icepyck.chunks import read_chunk
 from icepyck.manifest import ChunkRefInfo, ManifestReader
-from icepyck.repo import RepoInfo
 from icepyck.repo_state import RepoState
 from icepyck.session import WritableSession
 from icepyck.snapshot import NodeInfo, SnapshotReader
@@ -217,7 +216,7 @@ class Repository:
             self._storage = LocalStorage(str(path))
         else:
             raise TypeError("Either path or storage must be provided")
-        self._state = RepoState.from_repo_info(RepoInfo(storage=self._storage))
+        self._state = RepoState.from_storage(self._storage)
         self._snapshot_cache: dict[bytes, SnapshotReader] = {}
         self._manifest_cache: dict[bytes, ManifestReader] = {}
 
@@ -443,7 +442,7 @@ class Repository:
         Automatically called by :meth:`writable_session`.
         """
         if self._storage is not None:
-            self._state = RepoState.from_repo_info(RepoInfo(storage=self._storage))
+            self._state = RepoState.from_storage(self._storage)
             self._snapshot_cache.clear()
 
     def _apply_commit(self, result: object) -> None:
