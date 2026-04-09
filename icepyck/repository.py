@@ -463,8 +463,8 @@ class Repository:
             flushed_at=result.flushed_at,
             message=result.message,
         )
-        self._state.snapshots.append(new_snap)
-        self._state.branches[result.branch] = len(self._state.snapshots) - 1
+        new_idx = self._state.add_snapshot(new_snap)
+        self._state.branches[result.branch] = new_idx
         self._flush_repo(
             [
                 UpdateData(

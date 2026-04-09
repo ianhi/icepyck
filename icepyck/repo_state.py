@@ -26,6 +26,11 @@ class RepoState:
     branches: dict[str, int] = field(default_factory=dict)
     tags: dict[str, int] = field(default_factory=dict)
     deleted_tags: list[str] = field(default_factory=list)
+    _snap_index: dict[bytes, int] = field(default_factory=dict, repr=False)
+
+    def __post_init__(self) -> None:
+        if not self._snap_index:
+            self._snap_index = {s.snapshot_id: i for i, s in enumerate(self.snapshots)}
 
     @staticmethod
     def from_storage(storage: Storage) -> RepoState:
@@ -116,11 +121,15 @@ class RepoState:
         )
 
     def find_snapshot_index(self, snapshot_id: bytes) -> int:
-        """Return the index of the given snapshot_id, or -1 if not found."""
-        for i, snap in enumerate(self.snapshots):
-            if snap.snapshot_id == snapshot_id:
-                return i
-        return -1
+        """Return the index of the given snapshot_id, or -1 if not found. O(1)."""
+        return self._snap_index.get(snapshot_id, -1)
+
+    def add_snapshot(self, snap: SnapshotInfoData) -> int:
+        """Append a snapshot and update the index. Returns the new index."""
+        idx = len(self.snapshots)
+        self.snapshots.append(snap)
+        self._snap_index[snap.snapshot_id] = idx
+        return idx
 
     def get_snapshot_id_by_branch(self, branch: str) -> bytes:
         """Return the snapshot ID that a branch points to."""
