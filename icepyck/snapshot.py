@@ -35,6 +35,7 @@ class NodeInfo:
     node_id: bytes  # 8-byte ObjectId8
     user_data: bytes | None  # raw zarr.json bytes, if present
     manifest_refs: list[ManifestRefInfo] = field(default_factory=list)
+    dimension_names: list[str] = field(default_factory=list)
 
 
 class SnapshotReader:
@@ -136,8 +137,9 @@ class SnapshotReader:
             else:
                 user_data = None
 
-            # Manifest refs (only for array nodes)
+            # Array-specific data (manifest refs, dimension names)
             manifest_refs: list[ManifestRefInfo] = []
+            dimension_names: list[str] = []
             if node_data_type == NodeData.Array:
                 table = node.NodeData()
                 if table is not None:
@@ -146,10 +148,8 @@ class SnapshotReader:
 
                     for j in range(array_data.ManifestsLength()):
                         mref = array_data.Manifests(j)
-                        # Manifest ObjectId12
                         obj_id = mref.ObjectId()
                         manifest_id = bytes(obj_id.Bytes()) if obj_id else b""
-                        # Extents
                         extents = []
                         for k in range(mref.ExtentsLength()):
                             ext = mref.Extents(k)
@@ -161,12 +161,22 @@ class SnapshotReader:
                             )
                         )
 
+                    for j in range(array_data.DimensionNamesLength()):
+                        dn = array_data.DimensionNames(j)
+                        if dn is not None:
+                            name = dn.Name()
+                            if isinstance(name, bytes):
+                                name = name.decode("utf-8")
+                            if name:
+                                dimension_names.append(name)
+
             info = NodeInfo(
                 path=node_path,
                 node_type=node_type,
                 node_id=node_id,
                 user_data=user_data,
                 manifest_refs=manifest_refs,
+                dimension_names=dimension_names,
             )
             self._nodes.append(info)
             self._nodes_by_path[node_path] = info

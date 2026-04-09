@@ -393,6 +393,7 @@ class WritableSession:
                     user_data=user_data,
                     node_type=base_node.node_type,
                     manifests=manifest_refs,
+                    dimension_names=base_node.dimension_names,
                 )
             )
 

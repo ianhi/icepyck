@@ -21,11 +21,13 @@ from icepyck.generated.ArrayManifest import (
     ArrayManifestStartRefsVector,
 )
 from icepyck.generated.ArrayNodeData import (
+    ArrayNodeDataAddDimensionNames,
     ArrayNodeDataAddManifests,
     ArrayNodeDataAddShape,
     ArrayNodeDataAddShapeV2,
     ArrayNodeDataEnd,
     ArrayNodeDataStart,
+    ArrayNodeDataStartDimensionNamesVector,
     ArrayNodeDataStartManifestsVector,
     ArrayNodeDataStartShapeV2Vector,
     ArrayNodeDataStartShapeVector,
@@ -64,6 +66,11 @@ from icepyck.generated.ChunkRef import (
     ChunkRefEnd,
     ChunkRefStart,
     ChunkRefStartIndexVector,
+)
+from icepyck.generated.DimensionName import (
+    DimensionNameAddName,
+    DimensionNameEnd,
+    DimensionNameStart,
 )
 from icepyck.generated.DimensionShapeV2 import (
     DimensionShapeV2AddArrayLength,
@@ -245,6 +252,7 @@ class NodeWriteData:
     user_data: bytes | None  # zarr.json as UTF-8 bytes
     node_type: str  # "array" or "group"
     manifests: list[ManifestRefData] = field(default_factory=list)
+    dimension_names: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -480,11 +488,27 @@ def _build_node_snapshot(builder: flatbuffers.Builder, node: NodeWriteData) -> i
                 builder.PrependUOffsetTRelative(off)
             shape_v2_vec = builder.EndVector()
 
+        # dimension_names vector
+        dn_vec = None
+        if node.dimension_names:
+            dn_offsets = []
+            for dn in node.dimension_names:
+                name_off = builder.CreateString(dn)
+                DimensionNameStart(builder)
+                DimensionNameAddName(builder, name_off)
+                dn_offsets.append(DimensionNameEnd(builder))
+            ArrayNodeDataStartDimensionNamesVector(builder, len(dn_offsets))
+            for off in reversed(dn_offsets):
+                builder.PrependUOffsetTRelative(off)
+            dn_vec = builder.EndVector()
+
         ArrayNodeDataStart(builder)
         ArrayNodeDataAddManifests(builder, manifests_vec)
         ArrayNodeDataAddShape(builder, shape_vec)
         if shape_v2_vec is not None:
             ArrayNodeDataAddShapeV2(builder, shape_v2_vec)
+        if dn_vec is not None:
+            ArrayNodeDataAddDimensionNames(builder, dn_vec)
         node_data_off = ArrayNodeDataEnd(builder)
         node_data_type = NodeData.Array
     else:
