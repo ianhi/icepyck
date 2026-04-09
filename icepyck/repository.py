@@ -520,6 +520,10 @@ class Repository:
             snapshots=self._state.snapshots,
             deleted_tags=self._state.deleted_tags,
             updates=updates,
+            metadata=self._state.metadata,
+            config=self._state.config,
+            enabled_feature_flags=self._state.enabled_feature_flags,
+            disabled_feature_flags=self._state.disabled_feature_flags,
         )
         try:
             new_version = self._storage.conditional_write(

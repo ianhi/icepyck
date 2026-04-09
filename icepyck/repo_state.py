@@ -26,6 +26,12 @@ class RepoState:
     branches: dict[str, int] = field(default_factory=dict)
     tags: dict[str, int] = field(default_factory=dict)
     deleted_tags: list[str] = field(default_factory=list)
+    metadata: dict[str, bytes] = field(
+        default_factory=dict
+    )  # name -> opaque value bytes
+    config: bytes | None = None  # opaque config bytes (flexbuffers in reference impl)
+    enabled_feature_flags: list[int] = field(default_factory=list)  # uint16 flag IDs
+    disabled_feature_flags: list[int] = field(default_factory=list)  # uint16 flag IDs
     version: str = ""  # opaque version token from storage (for conditional writes)
     _snap_index: dict[bytes, int] = field(default_factory=dict, repr=False)
 
@@ -91,11 +97,43 @@ class RepoState:
             if name:
                 deleted_tags.append(name)
 
+        # Extract metadata (name -> opaque value bytes)
+        metadata: dict[str, bytes] = {}
+        for i in range(repo.MetadataLength()):
+            item = repo.Metadata(i)
+            if item is not None:
+                mname = item.Name()
+                if isinstance(mname, bytes):
+                    mname = mname.decode("utf-8")
+                if mname and not item.ValueIsNone():
+                    val_len = item.ValueLength()
+                    metadata[mname] = bytes(item.Value(j) for j in range(val_len))
+
+        # Extract config (opaque bytes)
+        config_data: bytes | None = None
+        if not repo.ConfigIsNone() and repo.ConfigLength() > 0:
+            config_data = bytes(repo.Config(j) for j in range(repo.ConfigLength()))
+
+        # Extract feature flags (uint16 arrays)
+        enabled_flags: list[int] = []
+        if not repo.EnabledFeatureFlagsIsNone():
+            for i in range(repo.EnabledFeatureFlagsLength()):
+                enabled_flags.append(repo.EnabledFeatureFlags(i))
+
+        disabled_flags: list[int] = []
+        if not repo.DisabledFeatureFlagsIsNone():
+            for i in range(repo.DisabledFeatureFlagsLength()):
+                disabled_flags.append(repo.DisabledFeatureFlags(i))
+
         return RepoState(
             snapshots=snapshots,
             branches=branches,
             tags=tags,
             deleted_tags=deleted_tags,
+            metadata=metadata,
+            config=config_data,
+            enabled_feature_flags=enabled_flags,
+            disabled_feature_flags=disabled_flags,
             version=version,
         )
 

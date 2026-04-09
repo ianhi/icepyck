@@ -103,6 +103,12 @@ from icepyck.generated.ManifestRef import (
     ManifestRefStart,
     ManifestRefStartExtentsVector,
 )
+from icepyck.generated.MetadataItem import (
+    MetadataItemAddName,
+    MetadataItemAddValue,
+    MetadataItemEnd,
+    MetadataItemStart,
+)
 from icepyck.generated.NewCommitUpdate import (
     NewCommitUpdateAddBranch,
     NewCommitUpdateAddNewSnapId,
@@ -129,8 +135,12 @@ from icepyck.generated.Ref import (
 )
 from icepyck.generated.Repo import (
     RepoAddBranches,
+    RepoAddConfig,
     RepoAddDeletedTags,
+    RepoAddDisabledFeatureFlags,
+    RepoAddEnabledFeatureFlags,
     RepoAddLatestUpdates,
+    RepoAddMetadata,
     RepoAddSnapshots,
     RepoAddSpecVersion,
     RepoAddStatus,
@@ -139,7 +149,10 @@ from icepyck.generated.Repo import (
     RepoStart,
     RepoStartBranchesVector,
     RepoStartDeletedTagsVector,
+    RepoStartDisabledFeatureFlagsVector,
+    RepoStartEnabledFeatureFlagsVector,
     RepoStartLatestUpdatesVector,
+    RepoStartMetadataVector,
     RepoStartSnapshotsVector,
     RepoStartTagsVector,
 )
@@ -813,6 +826,10 @@ def build_repo_payload(
     snapshots: list[SnapshotInfoData],
     deleted_tags: list[str] | None = None,
     updates: list[UpdateData] | None = None,
+    metadata: dict[str, bytes] | None = None,
+    config: bytes | None = None,
+    enabled_feature_flags: list[int] | None = None,
+    disabled_feature_flags: list[int] | None = None,
 ) -> bytes:
     """Build a Repo FlatBuffer payload (without header)."""
     builder = flatbuffers.Builder(2048)
@@ -861,6 +878,38 @@ def build_repo_payload(
         builder.PrependUOffsetTRelative(off)
     latest_updates_vec = builder.EndVector()
 
+    # metadata (MetadataItem tables)
+    meta_offsets = []
+    for mname, mvalue in sorted((metadata or {}).items()):
+        name_off = builder.CreateString(mname)
+        val_vec = builder.CreateByteVector(mvalue)
+        MetadataItemStart(builder)
+        MetadataItemAddName(builder, name_off)
+        MetadataItemAddValue(builder, val_vec)
+        meta_offsets.append(MetadataItemEnd(builder))
+    RepoStartMetadataVector(builder, len(meta_offsets))
+    for off in reversed(meta_offsets):
+        builder.PrependUOffsetTRelative(off)
+    metadata_vec = builder.EndVector()
+
+    # config (opaque byte vector)
+    config_vec = None
+    if config is not None:
+        config_vec = builder.CreateByteVector(config)
+
+    # feature flags (uint16 vectors)
+    ef_list = enabled_feature_flags or []
+    RepoStartEnabledFeatureFlagsVector(builder, len(ef_list))
+    for flag in reversed(ef_list):
+        builder.PrependUint16(flag)
+    enabled_flags_vec = builder.EndVector()
+
+    df_list = disabled_feature_flags or []
+    RepoStartDisabledFeatureFlagsVector(builder, len(df_list))
+    for flag in reversed(df_list):
+        builder.PrependUint16(flag)
+    disabled_flags_vec = builder.EndVector()
+
     # status (required) — Online
     flushed_at = int(time.time() * 1_000_000)
     RepoStatusStart(builder)
@@ -876,6 +925,11 @@ def build_repo_payload(
     RepoAddDeletedTags(builder, deleted_tags_vec)
     RepoAddLatestUpdates(builder, latest_updates_vec)
     RepoAddStatus(builder, status_off)
+    RepoAddMetadata(builder, metadata_vec)
+    if config_vec is not None:
+        RepoAddConfig(builder, config_vec)
+    RepoAddEnabledFeatureFlags(builder, enabled_flags_vec)
+    RepoAddDisabledFeatureFlags(builder, disabled_flags_vec)
     repo_off = RepoEnd(builder)
 
     builder.Finish(repo_off)
@@ -889,9 +943,22 @@ def build_repo(
     snapshots: list[SnapshotInfoData],
     deleted_tags: list[str] | None = None,
     updates: list[UpdateData] | None = None,
+    metadata: dict[str, bytes] | None = None,
+    config: bytes | None = None,
+    enabled_feature_flags: list[int] | None = None,
+    disabled_feature_flags: list[int] | None = None,
 ) -> bytes:
     """Build a complete repo file (header + FlatBuffer payload)."""
     payload = build_repo_payload(
-        spec_version, branches, tags, snapshots, deleted_tags, updates
+        spec_version,
+        branches,
+        tags,
+        snapshots,
+        deleted_tags,
+        updates,
+        metadata,
+        config,
+        enabled_feature_flags,
+        disabled_feature_flags,
     )
     return build_bytes(payload, FileType.REPO_INFO)
