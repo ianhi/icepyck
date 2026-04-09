@@ -180,16 +180,26 @@ class WritableSession:
             pnode = self._new_nodes.pop(from_path)
             pnode.path = to_path
             self._new_nodes[to_path] = pnode
+            # Move pending chunks too
+            to_move = [
+                (k, v) for k, v in self._pending_chunks.items() if k[0] == from_path
+            ]
+            for (_, coords), data in to_move:
+                del self._pending_chunks[(from_path, coords)]
+                self._pending_chunks[(to_path, coords)] = data
         elif from_path in self._base_nodes:
             # Record the move: delete old, add new with same node_id
             base = self._base_nodes[from_path]
             self._deleted_paths.add(from_path)
-            self._new_nodes[to_path] = _PendingNode(
+            pnode = _PendingNode(
                 node_id=base.node_id,
                 path=to_path,
                 user_data=base.user_data,
                 node_type=base.node_type,
             )
+            pnode.manifest_refs = base.manifest_refs
+            pnode.dimension_names = base.dimension_names
+            self._new_nodes[to_path] = pnode
             # Move any pending chunks
             to_move = [
                 (k, v) for k, v in self._pending_chunks.items() if k[0] == from_path
@@ -431,10 +441,20 @@ class WritableSession:
             if path in self._base_nodes:
                 continue  # already handled above (metadata update)
 
-            manifest_refs = []
             if path in new_manifests:
                 _, mref, _, _ = new_manifests[path]
                 manifest_refs = [mref]
+            elif pnode.manifest_refs:
+                # Carry forward manifest refs from moved base nodes
+                manifest_refs = [
+                    ManifestRefData(
+                        manifest_id=mr.manifest_id,
+                        extents=mr.extents,
+                    )
+                    for mr in pnode.manifest_refs
+                ]
+            else:
+                manifest_refs = []
 
             nodes.append(
                 NodeWriteData(
@@ -443,6 +463,7 @@ class WritableSession:
                     user_data=pnode.user_data,
                     node_type=pnode.node_type,
                     manifests=manifest_refs,
+                    dimension_names=pnode.dimension_names,
                 )
             )
 
@@ -466,7 +487,14 @@ def _compute_extents(refs: list[ChunkRefData]) -> list[tuple[int, int]]:
 class _PendingNode:
     """In-memory representation of a node pending commit."""
 
-    __slots__ = ("node_id", "path", "user_data", "node_type")
+    __slots__ = (
+        "node_id",
+        "path",
+        "user_data",
+        "node_type",
+        "manifest_refs",
+        "dimension_names",
+    )
 
     def __init__(
         self,
@@ -479,3 +507,7 @@ class _PendingNode:
         self.path = path
         self.user_data = user_data
         self.node_type = node_type
+        self.manifest_refs: list[
+            object
+        ] = []  # ManifestRefInfo from base node (for moves)
+        self.dimension_names: list[str] = []
