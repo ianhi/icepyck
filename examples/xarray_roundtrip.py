@@ -112,8 +112,9 @@ for coord in ds_original.coords:
 # --- Step 6: Show the diff between commits ---
 print()
 print("Diff between commits:")
-from icepyck.diff import show_snapshot
 from icepyck.diff_display import display_diff
+
+from icepyck.diff import show_snapshot
 
 result = show_snapshot(REPO_PATH, "main")
 display_diff(result)
