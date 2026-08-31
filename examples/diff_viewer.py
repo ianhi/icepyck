@@ -6,8 +6,9 @@
 # ///
 """Example: view the diff between two snapshots in the basic test repo."""
 
-from icepyck.diff import diff_snapshots
 from icepyck.diff_display import display_diff
+
+from icepyck.diff import diff_snapshots
 
 # Compare the parent of main with main in the basic test repo
 diff = diff_snapshots("test-repos/basic", "main~1", "main")
